@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
+import type { BookingWithPassenger } from '@/lib/types';
 import { trackEvent } from './analytics';
 
 export async function bookSeat(tripId: string, seats: number = 1) {
@@ -32,7 +33,7 @@ export async function bookSeat(tripId: string, seats: number = 1) {
   return result;
 }
 
-export async function getBookingsForTrip(tripId: string) {
+export async function getBookingsForTrip(tripId: string): Promise<BookingWithPassenger[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from('bookings')

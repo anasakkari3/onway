@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
+import type { MessageWithSender } from '@/lib/types';
 
-export async function getMessages(tripId: string) {
+export async function getMessages(tripId: string): Promise<MessageWithSender[]> {
   const supabase = await createClient();
   const { data: messages, error } = await supabase
     .from('messages')

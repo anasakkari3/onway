@@ -1,13 +1,14 @@
 import { createClient } from '@/lib/supabase/server';
+import type { CommunityInfo } from '@/lib/types';
 
-export async function getCommunityByInviteCode(inviteCode: string) {
+export async function getCommunityByInviteCode(inviteCode: string): Promise<CommunityInfo | null> {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc('get_community_by_invite_code', {
     p_invite_code: inviteCode.trim(),
   });
 
   if (error) throw error;
-  const rows = data as Array<{ id: string; name: string }>;
+  const rows = data as CommunityInfo[];
   return rows[0] ?? null;
 }
 
@@ -65,8 +66,6 @@ export async function getMyCommunities() {
   if (error) throw error;
   return data ?? [];
 }
-
-export type CommunityInfo = { id: string; name: string };
 
 export function getFirstCommunity(
   data: Awaited<ReturnType<typeof getMyCommunities>>

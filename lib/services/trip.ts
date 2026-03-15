@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
+import type { TripWithDriver } from '@/lib/types';
 import { trackEvent } from './analytics';
 
 export type CreateTripInput = {
@@ -48,7 +49,7 @@ export async function createTrip(input: CreateTripInput) {
   return data;
 }
 
-export async function getTripById(tripId: string) {
+export async function getTripById(tripId: string): Promise<TripWithDriver> {
   const supabase = await createClient();
   const { data: trip, error } = await supabase
     .from('trips')
@@ -65,7 +66,7 @@ export async function getTripById(tripId: string) {
   return { ...trip, driver: driver ?? null };
 }
 
-export async function getTripsByCommunity(communityId: string) {
+export async function getTripsByCommunity(communityId: string): Promise<TripWithDriver[]> {
   const supabase = await createClient();
   const { data: trips, error } = await supabase
     .from('trips')

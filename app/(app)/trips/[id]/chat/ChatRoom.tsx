@@ -2,20 +2,13 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import type { MessageWithSender } from '@/lib/types';
 import { sendMessage } from './actions';
 
-type Message = {
-  id: string;
-  sender_id: string;
-  content: string;
-  created_at: string;
-  sender: { display_name: string | null } | null;
-};
-
-type Props = { tripId: string; initialMessages: Message[] };
+type Props = { tripId: string; initialMessages: MessageWithSender[] };
 
 export default function ChatRoom({ tripId, initialMessages }: Props) {
-  const [messages, setMessages] = useState<Message[]>(initialMessages);
+  const [messages, setMessages] = useState<MessageWithSender[]>(initialMessages);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -28,13 +21,10 @@ export default function ChatRoom({ tripId, initialMessages }: Props) {
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'messages', filter: `trip_id=eq.${tripId}` },
         async (payload) => {
-          const newMsg = payload.new as { id: string; sender_id: string; content: string; created_at: string };
+          const newMsg = payload.new as MessageWithSender;
           setMessages((prev) => [
             ...prev,
-            {
-              ...newMsg,
-              sender: null,
-            },
+            { ...newMsg, sender: null },
           ]);
         }
       )

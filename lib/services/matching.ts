@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
+import type { TripSearchResult } from '@/lib/types';
 import { trackEvent } from './analytics';
 
 export type SearchTripsParams = {
@@ -47,19 +48,5 @@ export async function searchTrips(params: SearchTripsParams) {
     payload: { count: (data as unknown[]).length },
   });
 
-  return data as Array<{
-    id: string;
-    community_id: string;
-    driver_id: string;
-    origin_name: string;
-    destination_name: string;
-    departure_time: string;
-    seats_available: number;
-    price_cents: number | null;
-    driver_rating_avg: number;
-    origin_dist_m: number;
-    dest_dist_m: number;
-    time_diff_mins: number;
-    score: number;
-  }>;
+  return data as TripSearchResult[];
 }
