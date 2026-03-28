@@ -1,4 +1,5 @@
-import { createClient } from '@/lib/supabase/server';
+import { getAdminFirestore } from '@/lib/firebase/firestore-admin';
+import { getCurrentUser } from '@/lib/auth/session';
 
 export type AnalyticsEventName =
   | 'auth_success'
@@ -9,19 +10,24 @@ export type AnalyticsEventName =
   | 'booking_attempted'
   | 'booking_confirmed'
   | 'trip_completed'
-  | 'rating_submitted';
+  | 'rating_submitted'
+  | 'message_sent';
 
 export async function trackEvent(
   eventName: AnalyticsEventName,
   options: { userId?: string; communityId?: string | null; payload?: Record<string, unknown> } = {}
 ) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  await supabase.from('analytics_events').insert({
-    event_name: eventName,
-    user_id: options.userId ?? user?.id ?? null,
-    community_id: options.communityId ?? null,
-    payload: options.payload ?? {},
-  });
+  try {
+    const user = await getCurrentUser();
+    const db = getAdminFirestore();
+    await db.collection('analytics_events').add({
+      event_name: eventName,
+      user_id: options.userId ?? user?.id ?? null,
+      community_id: options.communityId ?? null,
+      payload: options.payload ?? {},
+      created_at: new Date().toISOString(),
+    });
+  } catch {
+    // Analytics is non-critical — never throw
+  }
 }

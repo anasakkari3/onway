@@ -1,77 +1,106 @@
-import { createClient } from '@/lib/supabase/server';
+import { getAdminFirestore } from '@/lib/firebase/firestore-admin';
+import { getCurrentUser } from '@/lib/auth/session';
 import type { CommunityInfo } from '@/lib/types';
 
 export async function getCommunityByInviteCode(inviteCode: string): Promise<CommunityInfo | null> {
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc('get_community_by_invite_code', {
-    p_invite_code: inviteCode.trim(),
-  });
+  const db = getAdminFirestore();
+  const snap = await db
+    .collection('communities')
+    .where('invite_code', '==', inviteCode.trim())
+    .limit(1)
+    .get();
 
-  if (error) throw error;
-  const rows = data as CommunityInfo[];
-  return rows[0] ?? null;
+  if (snap.empty) return null;
+  const doc = snap.docs[0];
+  return { id: doc.id, name: doc.data().name };
 }
 
 export async function joinCommunity(communityId: string) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) throw new Error('Unauthorized');
 
-  const { error } = await supabase.from('community_members').insert({
+  const db = getAdminFirestore();
+  const docId = `${communityId}_${user.id}`;
+  await db.collection('community_members').doc(docId).set({
     community_id: communityId,
     user_id: user.id,
     role: 'member',
+    joined_at: new Date().toISOString(),
   });
-
-  if (error) throw error;
 }
 
 export async function createCommunity(name: string, inviteCode: string) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) throw new Error('Unauthorized');
 
-  const { data: community, error: err1 } = await supabase
-    .from('communities')
-    .insert({ name, invite_code: inviteCode })
-    .select('id')
-    .single();
-
-  if (err1) throw err1;
-
-  const { error: err2 } = await supabase.from('community_members').insert({
-    community_id: community.id,
-    user_id: user.id,
-    role: 'admin',
+  const db = getAdminFirestore();
+  const communityRef = await db.collection('communities').add({
+    name,
+    invite_code: inviteCode,
+    created_at: new Date().toISOString(),
   });
 
-  if (err2) throw err2;
-  return community;
+  const docId = `${communityRef.id}_${user.id}`;
+  await db.collection('community_members').doc(docId).set({
+    community_id: communityRef.id,
+    user_id: user.id,
+    role: 'admin',
+    joined_at: new Date().toISOString(),
+  });
+
+  return { id: communityRef.id };
 }
 
 export async function getMyCommunities() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return [];
 
-  const { data, error } = await supabase
-    .from('community_members')
-    .select(`
-      community_id,
-      role,
-      community:communities(id, name, invite_code)
-    `)
-    .eq('user_id', user.id);
+  const db = getAdminFirestore();
+  const snap = await db
+    .collection('community_members')
+    .where('user_id', '==', user.id)
+    .get();
 
-  if (error) throw error;
-  return data ?? [];
+  if (snap.empty) return [];
+
+  const communityIds = snap.docs.map((d) => d.data().community_id as string);
+  const results: { community_id: string; role: string; community: CommunityInfo }[] = [];
+
+  // Fetch community details (Firestore 'in' queries support max 30)
+  const chunks = [];
+  for (let i = 0; i < communityIds.length; i += 30) {
+    chunks.push(communityIds.slice(i, i + 30));
+  }
+
+  for (const chunk of chunks) {
+    const commSnap = await db
+      .collection('communities')
+      .where('__name__', 'in', chunk)
+      .get();
+
+    const commMap = new Map(commSnap.docs.map((d) => [d.id, d.data()]));
+
+    for (const memberDoc of snap.docs) {
+      const data = memberDoc.data();
+      if (!chunk.includes(data.community_id)) continue;
+      const comm = commMap.get(data.community_id);
+      if (comm) {
+        results.push({
+          community_id: data.community_id,
+          role: data.role,
+          community: { id: data.community_id, name: comm.name },
+        });
+      }
+    }
+  }
+
+  return results;
 }
 
 export function getFirstCommunity(
   data: Awaited<ReturnType<typeof getMyCommunities>>
 ): CommunityInfo | null {
-  const first = data?.[0] as { community?: CommunityInfo | CommunityInfo[] } | undefined;
+  const first = data?.[0];
   if (!first?.community) return null;
-  const c = first.community;
-  return Array.isArray(c) ? (c[0] ?? null) : c;
+  return first.community;
 }

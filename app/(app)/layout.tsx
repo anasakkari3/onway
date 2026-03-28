@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
+import { getCurrentUser } from '@/lib/auth/session';
 import { getMyCommunities } from '@/lib/services/community';
 import AppNav from './AppNav';
 
@@ -8,28 +8,34 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // 1. Check auth — if this fails, redirect to login
+  let user;
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    // Skip auth for now – allow unauthenticated access to home; fix auth later
-    if (!user) {
-      return (
-        <div className="min-h-screen flex flex-col bg-slate-50 pb-16 md:pb-0">
-          <main className="flex-1">{children}</main>
-          <AppNav />
-        </div>
-      );
-    }
-    const communities = await getMyCommunities();
-    if (!communities?.length) redirect('/community');
-
-    return (
-      <div className="min-h-screen flex flex-col bg-slate-50 pb-16 md:pb-0">
-        <main className="flex-1">{children}</main>
-        <AppNav />
-      </div>
-    );
+    user = await getCurrentUser();
   } catch {
     redirect('/login');
   }
+
+  if (!user) {
+    redirect('/login');
+  }
+
+  // 2. Check communities — if this fails, still render the page
+  try {
+    const communities = await getMyCommunities();
+    if (!communities?.length) redirect('/community');
+  } catch (err) {
+    // Re-throw redirects so they work
+    if (err && typeof err === 'object' && 'digest' in err && String((err as { digest?: string }).digest).includes('NEXT_REDIRECT')) {
+      throw err;
+    }
+    // Community query failed — don't block the page, just continue
+  }
+
+  return (
+    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950">
+      <AppNav />
+      <main className="flex-1 pt-16 animate-fade-in-up">{children}</main>
+    </div>
+  );
 }

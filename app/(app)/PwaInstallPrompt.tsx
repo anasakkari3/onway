@@ -2,7 +2,10 @@
 
 import { useState, useEffect } from 'react';
 
+import { useTranslation } from '@/lib/i18n/LanguageProvider';
+
 export default function PwaInstallPrompt() {
+  const { t } = useTranslation();
   const [deferredPrompt, setDeferredPrompt] = useState<{ prompt: () => Promise<{ outcome: string }> } | null>(null);
   const [showPrompt, setShowPrompt] = useState(false);
   const [dismissed, setDismissed] = useState(false);
@@ -36,18 +39,18 @@ export default function PwaInstallPrompt() {
   if (!showPrompt || dismissed || !deferredPrompt) return null;
 
   return (
-    <div className="mb-4 rounded-lg border border-sky-200 bg-sky-50 p-3 text-sm text-sky-900">
-      <p className="font-medium">Install Ride Match</p>
-      <p className="mt-1 text-sky-700">Add to your home screen for a better experience.</p>
+    <div className="mb-4 rounded-lg border border-sky-200 dark:border-slate-800 bg-sky-50 dark:bg-slate-900 p-3 text-sm text-sky-900 dark:text-slate-100">
+      <p className="font-medium">{t('install_ride_match')}</p>
+      <p className="mt-1 text-sky-700 dark:text-sky-400">{t('add_to_home_screen')}</p>
       <div className="mt-2 flex gap-2">
         <button
           onClick={handleInstall}
-          className="rounded bg-sky-600 px-3 py-1.5 text-white hover:bg-sky-700"
+          className="rounded bg-sky-600 dark:bg-sky-500 px-3 py-1.5 text-white hover:bg-sky-700 dark:hover:bg-sky-600 transition-colors btn-press"
         >
-          Install
+          {t('install')}
         </button>
-        <button onClick={handleDismiss} className="text-sky-600 hover:underline">
-          Not now
+        <button onClick={handleDismiss} className="text-sky-600 dark:text-sky-400 hover:underline transition-colors btn-press">
+          {t('not_now')}
         </button>
       </div>
     </div>

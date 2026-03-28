@@ -1,7 +1,7 @@
 'use server';
 
-import { sendMessage as sendMessageService } from '@/lib/services/chat';
+import { sendTripMessage } from '@/lib/services/message';
 
 export async function sendMessage(tripId: string, content: string) {
-  return sendMessageService(tripId, content);
+  return sendTripMessage(tripId, content);
 }

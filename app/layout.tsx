@@ -18,17 +18,31 @@ export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",
 };
 
-export default function RootLayout({
+import { ThemeProvider } from "./providers";
+import { cookies } from 'next/headers';
+import { LanguageProvider } from '@/lib/i18n/LanguageProvider';
+import type { Lang } from '@/lib/i18n/dictionaries';
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cookieStore = await cookies();
+  const langValue = cookieStore.get('NEXT_LOCALE')?.value as Lang | undefined;
+  const lang: Lang = langValue || 'en';
+  const dir = lang === 'ar' || lang === 'he' ? 'rtl' : 'ltr';
+
   return (
-    <html lang="en">
+    <html lang={lang} dir={dir} suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground transition-colors duration-200`}
       >
-        {children}
+        <ThemeProvider>
+          <LanguageProvider lang={lang}>
+            {children}
+          </LanguageProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -1,14 +1,20 @@
 import { redirect } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
+import { getCurrentUser } from '@/lib/auth/session';
+import { getAdminFirestore } from '@/lib/firebase/firestore-admin';
 import { getFunnelMetrics, getDailyTripsAndBookings } from './queries';
 
 export default async function AdminAnalyticsPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) redirect('/login');
 
-  const { data: isAdmin } = await supabase.rpc('is_admin', { uid: user.id });
-  if (isAdmin !== true) redirect('/');
+  // Check admin role via community_members
+  const db = getAdminFirestore();
+  const adminSnap = await db.collection('community_members')
+    .where('user_id', '==', user.id)
+    .where('role', '==', 'admin')
+    .limit(1)
+    .get();
+  if (adminSnap.empty) redirect('/app');
 
   const [funnel, daily] = await Promise.all([
     getFunnelMetrics(),
