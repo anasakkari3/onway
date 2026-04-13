@@ -201,6 +201,7 @@ export async function sendCoordinationAction(
           title: notifConfig.title,
           body: notifConfig.body(displayName),
           linkUrl,
+          email: action === 'DRIVER_CONFIRMED',
         })
       )
     );

@@ -4,6 +4,7 @@ import { getMyPastTrips, getUserStats } from '@/lib/services/trip';
 import { getMyProfileFull } from '@/lib/services/user';
 import ProfileForm from './ProfileForm';
 import ProfileCompletenessIndicator from './ProfileCompletenessIndicator';
+import GuideHint from '@/components/GuideHint';
 import { DriverTrustSummary } from '@/app/(app)/DriverTrustSummary';
 import { formatLocalizedDate } from '@/lib/i18n/locale';
 import { getServerI18n } from '@/lib/i18n/server';
@@ -16,6 +17,7 @@ const COPY = {
     completedDrives: 'completed drives',
     completedJoined: 'completed rides joined',
     trustHelper: 'Received rating shows the feedback this person has received from other trip participants across completed trips. Completed drives count finished trips this person has driven. Profile setup is shown separately and does not change either number.',
+    profileGuide: 'Keep these details simple and clear. Drivers and riders use them to recognize you and coordinate the ride.',
     tripHistoryEmptyIcon: 'clock',
   },
   ar: {
@@ -23,6 +25,7 @@ const COPY = {
     completedDrives: 'رحلات مكتملة كسائق',
     completedJoined: 'رحلات مكتملة انضممت إليها',
     trustHelper: 'يعرض التقييم المستلم الانطباع العام الذي تلقاه هذا الشخص من بقية المشاركين في الرحلات المكتملة. أما عدد الرحلات المكتملة كسائق فيمثل الرحلات التي قادها بالفعل. إعداد الملف الشخصي معروض بشكل منفصل ولا يغيّر أيًا من الرقمين.',
+    profileGuide: 'اجعل بياناتك بسيطة وواضحة. السائقون والركاب يعتمدون عليها للتعرف عليك والتنسيق معك قبل الرحلة.',
     tripHistoryEmptyIcon: 'clock',
   },
   he: {
@@ -30,6 +33,7 @@ const COPY = {
     completedDrives: 'נסיעות שהושלמו כנהג',
     completedJoined: 'נסיעות שהצטרפתם אליהן והושלמו',
     trustHelper: 'הדירוג שהתקבל מציג את המשוב הכללי שהאדם הזה קיבל ממשתתפים אחרים בנסיעות שהושלמו. מספר הנסיעות שהושלמו כנהג מייצג נסיעות שהוא נהג בהן בפועל. הגדרת הפרופיל מוצגת בנפרד ואינה משנה אף אחד מהמספרים.',
+    profileGuide: 'שמרו על פרטים פשוטים וברורים. נהגים ונוסעים משתמשים בהם כדי לזהות ולתאם לפני הנסיעה.',
     tripHistoryEmptyIcon: 'clock',
   },
 } as const;
@@ -67,6 +71,8 @@ export default async function ProfilePage() {
         </Link>
       </div>
 
+      <GuideHint text={copy.profileGuide} dismissible />
+
       <div className="animate-fade-in-up rounded-2xl border border-slate-200 bg-white p-5 shadow-elevated dark:border-slate-800 dark:bg-slate-900/80">
         <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-slate-400">{copy.trustTitle}</p>
         <div className="flex flex-wrap items-start justify-between gap-4">
@@ -100,8 +106,6 @@ export default async function ProfilePage() {
           hasAge={typeof profile?.age === 'number' && profile.age > 0}
           hasGender={!!profile?.gender}
           hasIsDriver={typeof profile?.is_driver === 'boolean'}
-          showDriverLicense={profile?.is_driver === true}
-          hasDriverLicense={profile?.has_driver_license === true}
         />
       </div>
 
@@ -109,18 +113,12 @@ export default async function ProfilePage() {
         <ProfileForm
           userId={user.id}
           initialDisplayName={profile?.display_name ?? ''}
-          initialAvatarUrl={profile?.avatar_url ?? ''}
           initialPhone={profile?.phone ?? ''}
           initialCityOrArea={profile?.city_or_area ?? ''}
           initialAge={profile?.age ?? null}
           initialGender={profile?.gender ?? ''}
           initialIsDriver={profile?.is_driver ?? null}
-          initialHasDriverLicense={profile?.has_driver_license ?? null}
           initialGenderPreference={profile?.gender_preference ?? ''}
-          initialLicenseImageStatus={profile?.license_image_status ?? 'not_provided'}
-          initialInsuranceImageStatus={profile?.insurance_image_status ?? 'not_provided'}
-          initialLicenseDeclared={profile?.license_declared ?? false}
-          initialInsuranceDeclared={profile?.insurance_declared ?? false}
         />
       </div>
 

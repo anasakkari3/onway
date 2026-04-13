@@ -31,7 +31,7 @@ export default async function RootLayout({
 }>) {
   const cookieStore = await cookies();
   const langValue = cookieStore.get('NEXT_LOCALE')?.value as Lang | undefined;
-  const lang: Lang = langValue || 'en';
+  const lang: Lang = langValue || 'ar';
   const dir = getLangDir(lang);
 
   return (

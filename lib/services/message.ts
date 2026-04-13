@@ -363,6 +363,9 @@ export async function sendTripMessage(tripId: string, content: string): Promise<
             title: 'New trip message',
             body: `${senderDisplayName}: ${trimmedContent}`,
             linkUrl: `/trips/${tripId}/chat`,
+            // Throttle: send at most one chat email per trip per user per hour.
+            // Multiple messages in a burst won't produce multiple emails.
+            emailThrottleKey: `chat:${tripId}:${id}`,
           })
         )
       );

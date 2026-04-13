@@ -1,0 +1,46 @@
+[
+  {
+    "id": "azrieli-college-engineering",
+    "name": "Azrieli College of Engineering",
+    "description": "Official ride community for Azrieli College of Engineering.",
+    "type": "verified",
+    "membership_mode": "open",
+    "listed": true,
+    "is_system": false,
+    "invite_code": null,
+    "aliases": ["azrieli", "azraeli", "azrieli college", "azrieli college of engineering"]
+  },
+  {
+    "id": "hebrew-university-givat-ram",
+    "name": "Hebrew University - Givat Ram",
+    "description": "Official ride community for Hebrew University Givat Ram.",
+    "type": "verified",
+    "membership_mode": "open",
+    "listed": true,
+    "is_system": false,
+    "invite_code": null,
+    "aliases": ["givat ram", "hebrew university givat ram", "hebrew university - givat ram"]
+  },
+  {
+    "id": "hebrew-university-mount-scopus",
+    "name": "Hebrew University - Mount Scopus",
+    "description": "Official ride community for Hebrew University Mount Scopus.",
+    "type": "verified",
+    "membership_mode": "open",
+    "listed": true,
+    "is_system": false,
+    "invite_code": null,
+    "aliases": ["mount scopus", "hebrew university mount scopus", "hebrew university - mount scopus"]
+  },
+  {
+    "id": "hadassah-college",
+    "name": "Hadassah College",
+    "description": "Official ride community for Hadassah College.",
+    "type": "verified",
+    "membership_mode": "open",
+    "listed": true,
+    "is_system": false,
+    "invite_code": null,
+    "aliases": ["hadassah", "hadassah college"]
+  }
+]

@@ -37,6 +37,7 @@ import { canStartTrip, canCompleteTrip } from '@/lib/trips/lifecycle-permissions
 import { DriverTrustSummary } from '@/app/(app)/DriverTrustSummary';
 import CommunityBadge from '@/components/CommunityBadge';
 import EmptyStateCard from '@/components/EmptyStateCard';
+import GuideHint from '@/components/GuideHint';
 import { canDisplayDriverCancelAction } from '@/lib/trips/coordination';
 import TripCoordinationPanel from './TripCoordinationPanel';
 import ReportUserModal from './ReportUserModal';
@@ -67,6 +68,8 @@ const SURFACE_COPY = {
     communicationReadOnlyDesc:
       'Open the thread to review trip updates, coordination signals, and cancellations in one place.',
     passengerListHint: 'Confirmed riders and cancellations appear here as this trip changes.',
+    actionGuide:
+      'Review the route, time, driver details, and rules. If everything fits, confirm the booking and then use chat to coordinate pickup.',
     rosterEmptyTitle: 'No passengers yet',
     rosterEmptyDesc:
       'This trip is already live in the community. Seats will appear here as riders book.',
@@ -81,6 +84,8 @@ const SURFACE_COPY = {
     communicationReadOnlyDesc:
       'افتح المحادثة لمراجعة تحديثات الرحلة وإشارات التنسيق وعمليات الإلغاء في مكان واحد.',
     passengerListHint: 'تظهر هنا الحجوزات المؤكدة وعمليات الإلغاء كلما تغيّرت الرحلة.',
+    actionGuide:
+      'راجع المسار والوقت وتفاصيل السائق والقواعد. إذا كانت الرحلة مناسبة، أكّد الحجز ثم استخدم الدردشة لتنسيق الالتقاء.',
     rosterEmptyTitle: 'لا يوجد ركاب بعد',
     rosterEmptyDesc: 'هذه الرحلة منشورة الآن داخل المجتمع. ستظهر المقاعد هنا عندما يبدأ الركاب بالحجز.',
   },
@@ -94,6 +99,8 @@ const SURFACE_COPY = {
     communicationReadOnlyDesc:
       'פתחו את השרשור כדי לעבור על עדכוני נסיעה, סימוני תיאום וביטולים במקום אחד.',
     passengerListHint: 'נוסעים מאושרים וביטולים יופיעו כאן ככל שהנסיעה תשתנה.',
+    actionGuide:
+      'בדקו את המסלול, השעה, פרטי הנהג והכללים. אם הכול מתאים, אשרו הזמנה ואז השתמשו בצ׳אט לתיאום האיסוף.',
     rosterEmptyTitle: 'עדיין אין נוסעים',
     rosterEmptyDesc: 'הנסיעה כבר פעילה בקהילה. מושבים יופיעו כאן ברגע שמישהו יזמין.',
   },
@@ -247,6 +254,13 @@ const TRUST_COPY = {
     } satisfies Record<TripRulePresetKey, string>,
   },
 } as const;
+
+const SAFETY_FLOW_COPY = {
+  beforeBooking:
+    'Safety check: keep pickup details in this trip thread, confirm the car and meeting point before you go, and use report or block if something feels off.',
+  afterCancellation:
+    'If the cancellation created a safety concern or a pattern of misuse, you can still report it from this trip.',
+};
 
 function formatDeparture(isoString: string, lang: Lang, t: (key: string) => string) {
   const departure = new Date(isoString);
@@ -691,6 +705,10 @@ export default function TripDetailClient({
 
   return (
     <div className="space-y-4">
+      {!isDriver && !hasBooked && isScheduled && (
+        <GuideHint text={surfaceCopy.actionGuide} dismissible />
+      )}
+
       <div className="rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
         <div className={`px-5 pt-5 pb-4 ${
           isCancelled
@@ -803,6 +821,7 @@ export default function TripDetailClient({
             ratingAvg={trip.driver?.rating_avg}
             ratingCount={trip.driver?.rating_count}
             completedDrives={trip.driver_completed_drives ?? 0}
+            trustProfile={trip.driver_trust_profile ?? null}
             variant="full"
           />
         </div>
@@ -1163,6 +1182,9 @@ export default function TripDetailClient({
                 <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
                   {trustCopy.bookingChecklistDesc}
                 </p>
+                <p className="mt-2 text-xs font-medium text-amber-700 dark:text-amber-300">
+                  {SAFETY_FLOW_COPY.beforeBooking}
+                </p>
               </div>
 
               <label className="flex items-start gap-3 text-sm text-slate-700 dark:text-slate-300">
@@ -1293,6 +1315,11 @@ export default function TripDetailClient({
               trip.cancelled_at ? formatLocalizedDateTime(lang, trip.cancelled_at) : null
             )}
           </p>
+          {!isDriver && (
+            <p className="text-xs font-medium text-red-700 dark:text-red-300">
+              {SAFETY_FLOW_COPY.afterCancellation}
+            </p>
+          )}
         </div>
       )}
 
@@ -1305,6 +1332,9 @@ export default function TripDetailClient({
                 ? formatLocalizedDateTime(lang, myCancelledBooking.cancelled_at)
                 : null
             )}
+          </p>
+          <p className="text-xs font-medium text-slate-600 dark:text-slate-300">
+            {SAFETY_FLOW_COPY.afterCancellation}
           </p>
         </div>
       )}

@@ -117,6 +117,8 @@ export default function ChatRoom({
   // after entering chat (race with Firebase Auth client init / legacy trips
   // missing a backfilled membership doc).
   const hasObservedMembershipRef = useRef(false);
+  // Exposed so handleSubmit can trigger an immediate refresh after sending
+  const refreshMessagesRef = useRef<(() => Promise<void>) | null>(null);
 
   useEffect(() => {
     hasObservedMembershipRef.current = false;
@@ -189,6 +191,9 @@ export default function ChatRoom({
       }
     };
 
+    // Expose refreshMessages so handleSubmit can call it immediately after send
+    refreshMessagesRef.current = refreshMessages;
+
     const refreshChatState = () => {
       void refreshMessages();
       void refreshMembership();
@@ -217,6 +222,8 @@ export default function ChatRoom({
     try {
       await sendMessage(tripId, content);
       setInput('');
+      // Refresh immediately so the sent message appears without waiting for the polling cycle
+      void refreshMessagesRef.current?.();
     } catch (sendErr) {
       const errMsg = sendErr instanceof Error ? sendErr.message.toLowerCase() : '';
       if (lang === 'ar') {

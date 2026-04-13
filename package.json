@@ -7,7 +7,10 @@
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
-    "seed:system-community": "node scripts/seed-system-community.mjs",
+    "seed:system-community": "node scripts/seed-allowed-communities.mjs",
+    "seed:allowed-communities": "node scripts/seed-allowed-communities.mjs",
+    "cleanup:legacy-data": "node scripts/cleanup-legacy-data.mjs",
+    "email:test": "node scripts/test-trigger-email.mjs",
     "smoke:e2e": "node scripts/e2e-smoke.mjs",
     "smoke:e2e:install": "playwright install chromium"
   },

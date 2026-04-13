@@ -56,6 +56,21 @@ export default async function TripDetailPage({
     // non-critical
   }
 
+  if (trip.driver_trust_profile && user?.id && user.id !== trip.driver_id) {
+    try {
+      await trackEvent('driver_profile_viewed', {
+        userId: user.id,
+        payload: {
+          trip_id: id,
+          driver_id: trip.driver_id,
+          trust_score: trip.driver_trust_profile.trust_score,
+        },
+      });
+    } catch {
+      // non-critical
+    }
+  }
+
   return (
     <div className="p-4 max-w-lg mx-auto pb-8">
       <TripDetailClient

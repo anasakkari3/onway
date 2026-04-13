@@ -44,7 +44,7 @@ Search is multi-factor: location match score (with multilingual normalization), 
 | UI | Tailwind CSS 4 |
 | Runtime | React 19 |
 | Backend | Firebase Admin SDK (Firestore) |
-| Auth | Firebase Authentication (Email/Password) |
+| Auth | Firebase Authentication (email sign-in links) |
 | Security | Firestore Security Rules + Row-Level Access |
 | PWA | next-pwa (installable, offline-ready) |
 | E2E Testing | Playwright |
@@ -85,7 +85,7 @@ Structured warning logs (`logWarn`) capture permission denials and gate failures
 
 | Module | Description |
 |---|---|
-| Authentication | Email/Password auth, session cookies, protected routes |
+| Authentication | Email sign-in links, session cookies, protected routes |
 | Community system | Create, join, and scope all activity to a community |
 | Trip management | Create, edit, publish, and manage trip lifecycle |
 | Booking flow | Reserve seats, cancel, view passenger roster |
@@ -96,7 +96,7 @@ Structured warning logs (`logWarn`) capture permission denials and gate failures
 | Smart search | Multi-factor ranked search with recommendations |
 | Discovery feed | Nearby and relevant trips surfaced without manual search |
 | Admin analytics | Funnel metrics, daily activity, community insights |
-| Notifications | In-app notifications for bookings, cancellations, updates |
+| Notifications | In-app notifications plus best-effort email copies for important ride updates |
 | Multilingual | English, Arabic, Hebrew with full RTL support |
 | PWA | Installable on mobile, designed for on-the-go use |
 
@@ -142,12 +142,18 @@ Copy `.env.example` to `.env.local` and fill in all values.
 **Server-side:**
 `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`
 
+**Email notifications:**
+`NEXT_PUBLIC_APP_URL` should point to the deployed app URL so email buttons open the correct page.
+`FIREBASE_TRIGGER_EMAIL_COLLECTION` defaults to `mail`, matching the Firebase Trigger Email extension collection.
+
 ### Firebase Setup
 
 1. Create a Firebase project
-2. Enable Authentication with Email/Password
+2. Enable Authentication with email sign-in links
 3. Create a Firestore database
-4. Deploy security rules and indexes:
+4. Install the Firebase Trigger Email extension if email notifications are required for the environment
+5. Configure the extension to watch the `mail` collection, or set `FIREBASE_TRIGGER_EMAIL_COLLECTION` to the collection you chose
+6. Deploy security rules and indexes:
 
 ```bash
 npx firebase-tools login

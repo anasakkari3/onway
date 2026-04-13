@@ -2,7 +2,8 @@ import Link from 'next/link';
 import { Suspense } from 'react';
 import { getCurrentUser } from '@/lib/auth/session';
 import { getMyCommunities } from '@/lib/services/community';
-import { getUserProfile } from '@/lib/services/user';
+import { getUserProfile, getMyProfileFull } from '@/lib/services/user';
+import { getSavedPlaces } from '@/lib/services/savedPlaces';
 import {
   getMyTripsAsDriver,
   getMyBookings,
@@ -16,6 +17,7 @@ import SearchResults from './SearchResults';
 import SearchSkeleton from './SearchSkeleton';
 import DiscoveryFeed from './DiscoveryFeed';
 import CommunitySwitcher from './CommunitySwitcher';
+import GuideHint from '@/components/GuideHint';
 import { inferUserContext } from '@/lib/utils/context';
 import { getTripStatusPresentationWithTranslation } from '@/lib/trips/presentation';
 import { formatLocalizedDate } from '@/lib/i18n/locale';
@@ -57,6 +59,7 @@ const COPY = {
     searchChooseCommunity: 'Pick one community first. Search stays inside a single community.',
     multiCommunityFeed: 'Your feed shows rides from every community you joined.',
     selectedCommunityReady: 'Ready for your next trip? Find a seat or share your journey.',
+    dashboardGuide: 'Start here: choose the community you want, search for a route if you need a seat, or tap New trip if you can drive others.',
     scopeTitle: 'Community scope',
     scopeSelected: 'Search and new trip actions stay inside the selected community.',
     scopeMixed: 'Your feed is mixed right now. Pick one community to search or offer a ride there.',
@@ -83,6 +86,7 @@ const COPY = {
     searchChooseCommunity: 'اختر مجتمعًا أولًا. البحث يبقى داخل مجتمع واحد فقط.',
     multiCommunityFeed: 'الخلاصة تعرض رحلات من كل المجتمعات التي انضممت إليها.',
     selectedCommunityReady: 'مستعد لرحلتك القادمة؟ ابحث عن مقعد أو شارك رحلتك.',
+    dashboardGuide: 'ابدأ من هنا: اختر المجتمع المناسب، ابحث عن مسارك إذا كنت تحتاج مقعدًا، أو اضغط رحلة جديدة إذا كنت تستطيع توصيل الآخرين.',
     scopeTitle: 'نطاق المجتمع',
     scopeSelected: 'البحث وإنشاء الرحلات الجديدة يبقيان داخل المجتمع المحدد.',
     scopeMixed: 'الخلاصة الآن مختلطة. اختر مجتمعًا واحدًا للبحث أو لعرض رحلة بداخله.',
@@ -109,6 +113,7 @@ const COPY = {
     searchChooseCommunity: 'בחרו קודם קהילה. החיפוש נשאר בתוך קהילה אחת בלבד.',
     multiCommunityFeed: 'הפיד מציג נסיעות מכל הקהילות שאליהן הצטרפתם.',
     selectedCommunityReady: 'מוכנים לנסיעה הבאה? מצאו מקום או שתפו את הנסיעה שלכם.',
+    dashboardGuide: 'התחילו כאן: בחרו קהילה, חפשו מסלול אם אתם צריכים מקום, או לחצו על נסיעה חדשה אם אתם יכולים להסיע אחרים.',
     scopeTitle: 'טווח קהילה',
     scopeSelected: 'החיפוש ויצירת נסיעה חדשה נשארים בתוך הקהילה שנבחרה.',
     scopeMixed: 'כרגע הפיד מעורב. בחרו קהילה אחת כדי לחפש או להציע נסיעה בתוכה.',
@@ -139,8 +144,12 @@ export default async function HomePage(props: {
   const copy = COPY[lang];
 
   const user = await getCurrentUser();
-  const profile = user ? await getUserProfile(user.id) : null;
+  const [profile, savedPlaces] = user
+    ? await Promise.all([getUserProfile(user.id), getSavedPlaces(user.id)])
+    : [null, []];
+  const fullProfile = user ? await getMyProfileFull(user.id) : null;
   const firstName = profile?.display_name?.trim().split(/\s+/)[0] || null;
+  const cityOrArea = fullProfile?.city_or_area ?? undefined;
 
   const memberships = await getMyCommunities();
   const joinedCommunities = memberships.map((membership) => ({
@@ -165,6 +174,8 @@ export default async function HomePage(props: {
   const driverGenderQuery = normalizeDriverGenderFilter(
     typeof searchParams.driverGender === 'string' ? searchParams.driverGender : null
   );
+  const routeDemandStatus =
+    typeof searchParams.routeDemand === 'string' ? searchParams.routeDemand : null;
 
   let myTrips: Awaited<ReturnType<typeof getMyTripsAsDriver>> = [];
   let myBookings: Awaited<ReturnType<typeof getMyBookings>> = [];
@@ -270,6 +281,8 @@ export default async function HomePage(props: {
           </section>
         )}
 
+        <GuideHint text={copy.dashboardGuide} dismissible />
+
         <section className="animate-fade-in-up stagger-2 space-y-3">
           {!isSearchActive && (
             <div className="px-1">
@@ -286,6 +299,8 @@ export default async function HomePage(props: {
             initialDriverGenderFilter={driverGenderQuery}
             clearHref={clearSearchHref}
             communitySelectionRequired={hasMultipleCommunities}
+            savedPlaces={savedPlaces}
+            cityOrArea={cityOrArea}
           />
 
           {!isSearchActive && topRoutePairs.length > 0 && selectedCommunity && (
@@ -317,6 +332,7 @@ export default async function HomePage(props: {
               originQuery={originQuery}
               destQuery={destQuery}
               driverGenderFilter={driverGenderQuery}
+              routeDemandStatus={routeDemandStatus}
               lang={lang}
               t={tWide}
             />

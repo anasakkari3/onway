@@ -62,7 +62,7 @@ const TERMS_COPY: Record<
         bullets: [
           'Do not impersonate another person or organization.',
           'Do not share account access in a way that could create safety or trust problems.',
-          'If you offer rides, you are responsible for honestly declaring whether you are a driver and whether you hold a valid driver license.',
+          'If you offer rides, you are responsible for making sure you can legally and safely drive that trip.',
         ],
       },
       {
@@ -78,8 +78,7 @@ const TERMS_COPY: Record<
       {
         title: '4. Driver responsibilities',
         paragraphs: [
-          'Drivers are responsible for operating their vehicle lawfully and safely. Any declaration about licensing or vehicle documents in the product is provided by the user unless the product clearly says otherwise.',
-          'Placeholder document selections in the profile are not verification and do not create any verified status.',
+          'Drivers are responsible for operating their vehicle lawfully and safely. The product helps coordinate rides, but it does not replace the driver responsibilities required by law or community rules.',
         ],
       },
       {

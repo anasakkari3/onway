@@ -12,12 +12,19 @@ export type UsersRow = {
   age: number | null;
   gender: string | null;
   is_driver: boolean | null;
-  has_driver_license: boolean | null;
   gender_preference: string | null;
-  license_image_status: DocumentPlaceholderStatus;
-  insurance_image_status: DocumentPlaceholderStatus;
-  license_declared: boolean;
-  insurance_declared: boolean;
+  /** User-level opt-in/out for best-effort email copies of important notifications. Defaults to true. */
+  email_notifications_enabled?: boolean | null;
+  /** Auth-backed email verification state, copied server-side for trust display. */
+  email_verified?: boolean | null;
+  /** Cached trust metrics; services compute current values when rendering trust surfaces. */
+  communities_count?: number | null;
+  driver_trips_count?: number | null;
+  rider_trips_count?: number | null;
+  profile_completion?: number | null;
+  trust_score?: number | null;
+  /** Per-channel email controls. Missing values fall back to safe transactional defaults. */
+  notification_preferences?: Partial<NotificationPreferences> | null;
   avatar_url: string | null;
   /** Aggregate of ratings this user has received across all completed-trip roles. */
   rating_avg: number;
@@ -31,7 +38,6 @@ export type CommunityType = 'verified' | 'public';
 export type CommunityMembershipMode = 'open' | 'approval_required';
 export type CommunityJoinRequestStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
 export type CommunityJoinSource = 'auto_public' | 'open_join' | 'approval' | 'invite';
-export type DocumentPlaceholderStatus = 'not_provided' | 'provided_placeholder';
 
 /** Community stored in Firestore `communities` collection */
 export type CommunitiesRow = {
@@ -233,16 +239,90 @@ export type UserBlocksRow = {
   created_at: string;
 };
 
+export type NotificationPreferenceKey =
+  | 'booking_emails'
+  | 'cancellation_emails'
+  | 'chat_emails'
+  | 'route_alert_emails'
+  | 'system_emails'
+  | 'marketing_emails';
+
+export type NotificationPreferences = Record<NotificationPreferenceKey, boolean>;
+
 /** Notification stored in Firestore `notifications` collection */
 export type NotificationsRow = {
   id: string;
   user_id: string;
-  type: 'booking' | 'cancellation' | 'message' | 'system';
+  type: 'booking' | 'cancellation' | 'message' | 'route_alert' | 'system' | 'marketing';
   title: string;
   body: string;
   is_read: boolean;
   link_url?: string | null;
+  dedupe_key?: string | null;
   created_at: string;
+};
+
+/** Rider demand signal stored in Firestore `route_requests` collection */
+export type RouteRequestsRow = {
+  id: string;
+  community_id: string;
+  user_id: string;
+  origin_name: string;
+  destination_name: string;
+  origin_lat?: number | null;
+  origin_lng?: number | null;
+  destination_lat?: number | null;
+  destination_lng?: number | null;
+  normalized_origin: string;
+  normalized_destination: string;
+  request_count?: number;
+  active: boolean;
+  created_at: string;
+  updated_at?: string | null;
+  fulfilled_by_trip_id?: string | null;
+  fulfilled_at?: string | null;
+};
+
+/** Route alert stored in Firestore `route_alerts` collection */
+export type RouteAlertsRow = {
+  id: string;
+  community_id: string;
+  user_id: string;
+  origin_name: string;
+  destination_name: string;
+  origin_lat?: number | null;
+  origin_lng?: number | null;
+  destination_lat?: number | null;
+  destination_lng?: number | null;
+  normalized_origin: string;
+  normalized_destination: string;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+  last_notified_at?: string | null;
+  last_matched_trip_id?: string | null;
+};
+
+export type TrustBadgeKey =
+  | 'verified_email'
+  | 'active_driver'
+  | 'frequent_rider'
+  | 'community_member';
+
+export type TrustBadge = {
+  key: TrustBadgeKey;
+  label: string;
+};
+
+export type TrustProfile = {
+  user_id: string;
+  email_verified: boolean;
+  communities_count: number;
+  driver_trips_count: number;
+  rider_trips_count: number;
+  profile_completion: number;
+  trust_score: number;
+  badges: TrustBadge[];
 };
 
 /** Analytics event stored in Firestore `analytics_events` collection */
@@ -273,6 +353,7 @@ export type RequiredProfileField =
 export type TripWithDriver = TripsRow & {
   driver: UserProfile | null;
   driver_completed_drives?: number;
+  driver_trust_profile?: TrustProfile | null;
 };
 
 /** Booking with optional passenger relation */
@@ -302,6 +383,7 @@ export type TripSearchResult = {
   driver_received_rating_avg: number;
   driver_received_rating_count: number;
   driver_completed_drives: number;
+  driver_trust_profile?: TrustProfile | null;
   origin_dist_m: number;
   dest_dist_m: number;
   time_diff_mins: number;

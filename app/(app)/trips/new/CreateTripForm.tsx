@@ -5,6 +5,9 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useTranslation } from '@/lib/i18n/LanguageProvider';
 import CommunityBadge from '@/components/CommunityBadge';
+import GuideHint from '@/components/GuideHint';
+import SavedPlaceChips from '@/components/SavedPlaceChips';
+import type { SavedPlace } from '@/lib/services/savedPlaces';
 import type {
   CommunityType,
   TripPassengerGenderPreference,
@@ -23,6 +26,11 @@ import { formatRecurringSummary, sanitizeWeekdays, isValidTimeString } from '@/l
 import { createTrip } from './actions';
 import { formatLocalizedDateTime, formatSeatCount } from '@/lib/i18n/locale';
 
+export type RecentRoute = {
+  origin: string;
+  destination: string;
+};
+
 type Props = {
   communityId: string;
   communityName: string;
@@ -30,6 +38,9 @@ type Props = {
   initialOriginName?: string;
   initialDestinationName?: string;
   backHref?: string;
+  savedPlaces?: SavedPlace[];
+  recentRoutes?: RecentRoute[];
+  routeRequestId?: string | null;
 };
 
 function getMinDatetime(): string {
@@ -53,11 +64,14 @@ const COPY = {
     beforePublishBullets: [
       'Passengers will see your route, departure time, seats, and optional price.',
       'Publishing a ride requires display name, phone, city or area, age, and driver-ready details.',
-      'Document placeholder selections do not count as verification.',
       'Required fields are marked with an asterisk.',
       'After publishing, you will land on the trip page to review the ride and next steps.',
     ],
+    formGuide: 'Fill the route first, then choose the time, seats, and vehicle details. You can leave the price empty or mark the ride as free.',
     reviewProfile: 'Review profile details',
+    repeatRoute: 'Repeat a previous trip',
+    quickFillFrom: 'From saved places',
+    quickFillTo: 'Saved destinations',
     startingPoint: 'Starting point',
     startingPlaceholder: 'e.g. Tel Aviv Central Station',
     destination: 'Destination',
@@ -105,11 +119,14 @@ const COPY = {
     beforePublishBullets: [
       'سيرى الركاب المسار ووقت الانطلاق وعدد المقاعد والسعر الاختياري.',
       'نشر الرحلة يتطلب الاسم المعروض ورقم الهاتف والمدينة أو المنطقة والعمر وتفاصيل السائق الأساسية.',
-      'اختيارات المستندات المؤقتة لا تُعتبر تحققًا.',
       'الحقول المطلوبة مميزة بعلامة النجمة.',
       'بعد النشر ستنتقل إلى صفحة الرحلة لمراجعتها ومعرفة الخطوات التالية.',
     ],
+    formGuide: 'ابدأ بالمسار، ثم اختر الوقت والمقاعد وتفاصيل المركبة. يمكنك ترك السعر فارغًا أو تعليم الرحلة كمجانية.',
     reviewProfile: 'راجع تفاصيل الملف الشخصي',
+    repeatRoute: 'كرر رحلة سابقة',
+    quickFillFrom: 'من الأماكن المحفوظة',
+    quickFillTo: 'وجهات محفوظة',
     startingPoint: 'نقطة الانطلاق',
     startingPlaceholder: 'مثال: محطة تل أبيب المركزية',
     destination: 'الوجهة',
@@ -157,11 +174,14 @@ const COPY = {
     beforePublishBullets: [
       'הנוסעים יראו את המסלול, זמן היציאה, מספר המושבים והמחיר האופציונלי.',
       'פרסום נסיעה דורש שם תצוגה, טלפון, עיר או אזור, גיל ופרטי נהג בסיסיים.',
-      'בחירת מסמכים זמניים לא נחשבת לאימות.',
       'שדות חובה מסומנים בכוכבית.',
       'אחרי הפרסום תעברו לעמוד הנסיעה כדי לבדוק את הפרטים והצעדים הבאים.',
     ],
+    formGuide: 'התחילו במסלול, אחר כך בחרו זמן, מושבים ופרטי רכב. אפשר להשאיר מחיר ריק או לסמן נסיעה בחינם.',
     reviewProfile: 'בדקו את פרטי הפרופיל',
+    repeatRoute: 'חזרה על נסיעה קודמת',
+    quickFillFrom: 'ממקומות שמורים',
+    quickFillTo: 'יעדים שמורים',
     startingPoint: 'נקודת מוצא',
     startingPlaceholder: 'למשל: התחנה המרכזית תל אביב',
     destination: 'יעד',
@@ -409,6 +429,9 @@ export default function CreateTripForm({
   initialOriginName = '',
   initialDestinationName = '',
   backHref = '/app',
+  savedPlaces = [],
+  recentRoutes = [],
+  routeRequestId = null,
 }: Props) {
   const router = useRouter();
   const { t, lang } = useTranslation();
@@ -562,11 +585,9 @@ export default function CreateTripForm({
 
       const trip = await createTrip({
         communityId,
-        originLat: 0,
-        originLng: 0,
+        // Geocoding not implemented yet — coordinates omitted (stored as null in Firestore).
+        // Replace with real lat/lng once geocoding is added.
         originName: originName.trim(),
-        destinationLat: 0,
-        destinationLng: 0,
         destinationName: destinationName.trim(),
         vehicleMakeModel: vehicleMakeModel.trim(),
         vehicleColor: vehicleColor.trim() || null,
@@ -576,6 +597,7 @@ export default function CreateTripForm({
         tripRulesNote: tripRulesNote.trim() || null,
         seatsTotal: seats,
         priceCents,
+        routeRequestId,
         // Mode-specific fields
         tripMode,
         ...(isRecurring
@@ -614,6 +636,8 @@ export default function CreateTripForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+      <GuideHint text={copy.formGuide} dismissible />
+
       {/* Community context */}
       <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4">
         <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">{copy.postingIn}</p>
@@ -642,9 +666,35 @@ export default function CreateTripForm({
         </Link>
       </div>
 
+      {/* Repeat previous route — shown when both fields empty and user has recent routes */}
+      {recentRoutes.length > 0 && !originName.trim() && !destinationName.trim() && (
+        <div className="space-y-1.5">
+          <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest px-1">
+            ↻ {copy.repeatRoute}
+          </p>
+          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+            {recentRoutes.map((route, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => {
+                  setOriginName(route.origin);
+                  setDestinationName(route.destination);
+                }}
+                className="shrink-0 flex items-center gap-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 rounded-2xl text-sm font-medium text-slate-700 dark:text-slate-200 hover:border-sky-400 hover:text-sky-600 dark:hover:border-sky-500 dark:hover:text-sky-300 transition-colors shadow-sm"
+              >
+                <span dir="auto">{route.origin}</span>
+                <span className="text-slate-400 opacity-60 px-0.5">→</span>
+                <span dir="auto">{route.destination}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Route */}
       <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 overflow-hidden">
-        <div className="px-4 pt-4 pb-3">
+        <div className="px-4 pt-4 pb-2">
           <label htmlFor="origin" className="block text-[10px] font-bold text-sky-600 dark:text-sky-400 uppercase tracking-widest mb-1">
             {copy.startingPoint} <span className="text-red-400 ml-0.5">*</span>
           </label>
@@ -660,6 +710,17 @@ export default function CreateTripForm({
           />
           {originError && <p className="text-[10px] text-red-500 mt-1">{originError}</p>}
         </div>
+        {/* Origin saved place chips */}
+        {savedPlaces.length > 0 && (
+          <div className="px-4 pb-3">
+            <SavedPlaceChips
+              initialPlaces={savedPlaces}
+              lang={lang}
+              onSelect={(name) => setOriginName(name)}
+              compact
+            />
+          </div>
+        )}
         <div className="flex items-center px-4">
           <div className="flex flex-col items-center mr-3">
             <div className="w-2 h-2 rounded-full bg-sky-500" />
@@ -668,7 +729,7 @@ export default function CreateTripForm({
           </div>
           <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800" />
         </div>
-        <div className="px-4 pt-3 pb-4">
+        <div className="px-4 pt-3 pb-2">
           <label htmlFor="destination" className="block text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mb-1">
             {copy.destination} <span className="text-red-400 ml-0.5">*</span>
           </label>
@@ -684,6 +745,17 @@ export default function CreateTripForm({
           />
           {destinationError && <p className="text-[10px] text-red-500 mt-1">{destinationError}</p>}
         </div>
+        {/* Destination saved place chips */}
+        {savedPlaces.length > 0 && (
+          <div className="px-4 pb-4">
+            <SavedPlaceChips
+              initialPlaces={savedPlaces}
+              lang={lang}
+              onSelect={(name) => setDestinationName(name)}
+              compact
+            />
+          </div>
+        )}
       </div>
 
       {/* Trip mode selector */}
@@ -999,7 +1071,7 @@ export default function CreateTripForm({
         </div>
         {!isFree && (
           <div className="relative">
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-medium text-sm">$</span>
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-medium text-sm">₪</span>
             <input
               type="number"
               step="0.01"

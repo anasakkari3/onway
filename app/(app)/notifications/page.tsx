@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import EmptyStateCard from '@/components/EmptyStateCard';
+import GuideHint from '@/components/GuideHint';
 import { getCurrentUser } from '@/lib/auth/session';
 import { getServerI18n } from '@/lib/i18n/server';
 import { getMyNotifications } from '@/lib/services/notification';
@@ -12,6 +13,7 @@ const COPY = {
     emptyDesc: "When you get updates about bookings or your rides, they'll appear here.",
     summaryDesc:
       'Bookings, ride changes, and chat events appear here so nothing important gets buried.',
+    guide: 'Unread items need your attention first. You may also receive the same important updates by email when Firebase email delivery is configured.',
     unreadCount: (count: number) => `${count} unread`,
     allCaughtUp: 'All caught up',
   },
@@ -20,6 +22,7 @@ const COPY = {
     emptyDesc: 'عندما تصلك تحديثات عن الحجوزات أو رحلاتك ستظهر هنا.',
     summaryDesc:
       'تظهر هنا تحديثات الحجوزات وتغييرات الرحلات وأحداث الدردشة حتى لا يضيع عليك شيء مهم.',
+    guide: 'ابدأ بالإشعارات غير المقروءة. وقد تصلك نفس التحديثات المهمة عبر البريد عندما يكون إرسال البريد من Firebase مفعّلًا.',
     unreadCount: (count: number) => `${count} غير مقروء`,
     allCaughtUp: 'لا شيء جديد الآن',
   },
@@ -28,6 +31,7 @@ const COPY = {
     emptyDesc: 'כשתקבלו עדכונים על הזמנות או על הנסיעות שלכם, הם יופיעו כאן.',
     summaryDesc:
       'כאן מופיעים עדכוני הזמנות, שינויי נסיעה ואירועי צ׳אט כדי שדבר חשוב לא ייעלם.',
+    guide: 'התחילו מהפריטים שלא נקראו. עדכונים חשובים יכולים להישלח גם באימייל כאשר שליחת אימייל דרך Firebase מוגדרת.',
     unreadCount: (count: number) => `${count} לא נקראו`,
     allCaughtUp: 'הכול מעודכן',
   },
@@ -103,6 +107,8 @@ export default async function NotificationsPage() {
           </span>
         </div>
       </section>
+
+      <GuideHint text={copy.guide} variant="info" dismissible />
 
       <NotificationListClient initialNotifications={notifications} />
     </div>

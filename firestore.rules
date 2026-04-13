@@ -18,8 +18,19 @@ service cloud.firestore {
       return /databases/$(database)/documents/trips/$(tripId);
     }
 
+    function isAllowedCommunityId(communityId) {
+      return communityId in [
+        'azrieli-college-engineering',
+        'hebrew-university-givat-ram',
+        'hebrew-university-mount-scopus',
+        'hadassah-college'
+      ];
+    }
+
     function isCommunityMember(communityId) {
-      return isSignedIn() && exists(communityMemberDocPath(communityId));
+      return isSignedIn()
+        && isAllowedCommunityId(communityId)
+        && exists(communityMemberDocPath(communityId));
     }
 
     function hasTripMembership(tripId) {
@@ -57,13 +68,18 @@ service cloud.firestore {
       return isCommunityMember(communityId);
     }
 
+    function isCommunityAdmin(communityId) {
+      return isCommunityMember(communityId)
+        && get(communityMemberDocPath(communityId)).data.role == 'admin';
+    }
+
     match /users/{userId} {
       allow read: if false;
       allow write: if false;
     }
 
     match /communities/{communityId} {
-      allow read: if isCommunityMember(communityId);
+      allow read: if isAllowedCommunityId(communityId) && isCommunityMember(communityId);
       allow write: if false;
     }
 
@@ -94,6 +110,23 @@ service cloud.firestore {
 
     match /notifications/{notificationId} {
       allow read: if isSignedIn() && resource.data.user_id == request.auth.uid;
+      allow write: if false;
+    }
+
+    match /route_requests/{requestId} {
+      allow read: if isSignedIn() && canReadTrip(resource.data.community_id);
+      allow write: if false;
+    }
+
+    match /route_alerts/{alertId} {
+      allow read: if isSignedIn() && resource.data.user_id == request.auth.uid;
+      allow write: if false;
+    }
+
+    match /reports/{reportId} {
+      allow read: if isSignedIn()
+        && isAllowedCommunityId(resource.data.community_id)
+        && isCommunityAdmin(resource.data.community_id);
       allow write: if false;
     }
 

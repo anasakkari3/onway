@@ -4,6 +4,7 @@ import { BRAND_NAME } from '@/lib/brand/config';
 import { getServerLang } from '@/lib/i18n/server';
 import { getRequiredProfileCompletionStatus } from '@/lib/services/user';
 import ProfileForm from '@/app/(app)/profile/ProfileForm';
+import GuideHint from '@/components/GuideHint';
 
 const COPY = {
   en: {
@@ -12,6 +13,7 @@ const COPY = {
     description:
       `Before entering ${BRAND_NAME}, we need the minimum details people use to recognize and coordinate with you. You can update them later from your profile.`,
     needed: 'Still needed',
+    guide: 'This is a one-time setup. Add the details people need to recognize you, then you can join communities and use rides.',
     fieldLabels: {
       display_name: 'Display name',
       phone: 'Phone',
@@ -27,6 +29,7 @@ const COPY = {
     description:
       `قبل دخول ${BRAND_NAME}، نحتاج إلى الحد الأدنى من التفاصيل التي يعتمد عليها الناس للتعرّف عليك والتنسيق معك. يمكنك تعديلها لاحقًا من صفحة ملفك الشخصي.`,
     needed: 'ما زال مطلوبًا',
+    guide: 'هذا إعداد لمرة واحدة. أضف التفاصيل التي يحتاجها الآخرون للتعرف عليك، وبعدها يمكنك الانضمام للمجتمعات واستخدام الرحلات.',
     fieldLabels: {
       display_name: 'الاسم المعروض',
       phone: 'رقم الهاتف',
@@ -42,6 +45,7 @@ const COPY = {
     description:
       `לפני שנכנסים אל ${BRAND_NAME}, אנחנו צריכים את הפרטים הבסיסיים שאנשים משתמשים בהם כדי לזהות אתכם ולתאם איתכם. תמיד תוכלו לעדכן אותם אחר כך מהפרופיל.`,
     needed: 'עדיין חסר',
+    guide: 'זו הגדרה חד-פעמית. הוסיפו את הפרטים שאנשים צריכים כדי לזהות אתכם, ואז תוכלו להצטרף לקהילות ולהשתמש בנסיעות.',
     fieldLabels: {
       display_name: 'שם תצוגה',
       phone: 'טלפון',
@@ -85,6 +89,8 @@ export default async function OnboardingPage(props: {
           </p>
         </div>
 
+        <GuideHint text={copy.guide} variant="info" />
+
         <div className="rounded-3xl border border-amber-200 bg-amber-50 p-5 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-wide text-amber-800">
             {copy.needed}
@@ -105,17 +111,14 @@ export default async function OnboardingPage(props: {
           <ProfileForm
             userId={user.id}
             initialDisplayName={profile?.display_name ?? ''}
-            initialAvatarUrl={profile?.avatar_url ?? ''}
             initialPhone={profile?.phone ?? ''}
             initialCityOrArea={profile?.city_or_area ?? ''}
             initialAge={profile?.age ?? null}
             initialGender={profile?.gender ?? ''}
             initialIsDriver={profile?.is_driver ?? null}
-            initialHasDriverLicense={profile?.has_driver_license ?? null}
             initialGenderPreference={profile?.gender_preference ?? ''}
             mode="onboarding"
             redirectOnSuccess={nextPath}
-            showAvatarField={false}
           />
         </div>
       </div>

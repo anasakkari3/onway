@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useSyncExternalStore } from 'react';
 import { Player, type PlayerRef } from '@remotion/player';
 import {
   PhoneVideoComposition,
@@ -10,13 +10,15 @@ import {
   PHONE_VIDEO_HEIGHT,
 } from './PhoneVideoComposition';
 
-export default function PhoneVideoPlayer() {
-  const [mounted, setMounted] = useState(false);
-  const playerRef = useRef<PlayerRef>(null);
+// useSyncExternalStore is the React-recommended way to detect client mount
+// without calling setState inside useEffect (which causes cascading renders).
+const subscribe = () => () => {};
+const getClientSnapshot = () => true;
+const getServerSnapshot = () => false;
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+export default function PhoneVideoPlayer() {
+  const mounted = useSyncExternalStore(subscribe, getClientSnapshot, getServerSnapshot);
+  const playerRef = useRef<PlayerRef>(null);
 
   // Auto-play once the player is ready
   useEffect(() => {

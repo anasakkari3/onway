@@ -4,7 +4,7 @@ import { dictionaries, type DictKey, Lang, translate } from './dictionaries';
 export async function getServerLang(): Promise<Lang> {
   const cookieStore = await cookies();
   const langValue = cookieStore.get('NEXT_LOCALE')?.value as Lang | undefined;
-  return langValue && dictionaries[langValue] ? langValue : 'en';
+  return langValue && dictionaries[langValue] ? langValue : 'ar';
 }
 
 export async function getServerI18n() {

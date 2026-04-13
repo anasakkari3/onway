@@ -45,12 +45,14 @@ export default function BrandLogo({
   const dimensions = SIZE_MAP[size];
 
   return (
+    // eslint-disable-next-line @next/next/no-img-element
     <img
       src={asset.src}
       alt={asset.alt}
       width={dimensions.width}
       height={dimensions.height}
       loading={priority ? 'eager' : 'lazy'}
+      fetchPriority={priority ? 'high' : 'auto'}
       decoding="async"
       className={`h-auto w-auto max-w-full object-contain align-middle ${CONSTRAINT_CLASS[size]} ${className}`.trim()}
       style={style}

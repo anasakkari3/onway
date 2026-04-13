@@ -23,6 +23,7 @@ import {
   doesPassengerGenderMatchPreference,
   normalizeTripPassengerGenderPreference,
 } from '@/lib/trips/comfort';
+import { isAllowedCommunityId } from '@/lib/community/allowed';
 
 function buildPassengerSnapshot(
   userId: string,
@@ -72,6 +73,10 @@ export async function bookSeat(
 
     if (!tripDoc.exists) throw new NotFoundError('Trip not found');
     const tripData = tripDoc.data()! as TripsRow;
+    if (!isAllowedCommunityId(tripData.community_id)) {
+      throw new NotFoundError('Trip not found');
+    }
+
     const effectiveTrip = {
       ...tripData,
       status: getEffectiveTripStatus(tripData),
@@ -350,6 +355,10 @@ export async function cancelBooking(bookingId: string) {
     const tripDoc = await tx.get(tripRef);
     if (!tripDoc.exists) throw new NotFoundError('Trip not found');
     const tripData = tripDoc.data()! as TripsRow;
+    if (!isAllowedCommunityId(tripData.community_id)) {
+      throw new NotFoundError('Trip not found');
+    }
+
     const effectiveTrip = {
       ...tripData,
       status: getEffectiveTripStatus(tripData),

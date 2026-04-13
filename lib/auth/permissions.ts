@@ -1,4 +1,5 @@
 import { getAdminFirestore } from '@/lib/firebase/firestore-admin';
+import { isAllowedCommunityId } from '@/lib/community/allowed';
 import type { BookingsRow, CommunityMembersRow, TripsRow } from '@/lib/types';
 import { getEffectiveTripStatus } from '@/lib/trips/lifecycle';
 import { hasTripDeparted, isPreDepartureTrip } from '@/lib/trips/coordination';
@@ -171,6 +172,7 @@ export async function getCommunityMembershipRole(
   passedDb?: FirestoreDb
 ): Promise<CommunityMembersRow['role'] | null> {
   if (!userId) return null;
+  if (!isAllowedCommunityId(communityId)) return null;
 
   const db = passedDb ?? getAdminFirestore();
   const membershipDoc = await db.collection('community_members').doc(`${communityId}_${userId}`).get();

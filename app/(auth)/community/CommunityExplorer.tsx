@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import CommunityBadge from '@/components/CommunityBadge';
 import { useTranslation } from '@/lib/i18n/LanguageProvider';
+import GuideHint from '@/components/GuideHint';
 import { formatLocalizedDateTime } from '@/lib/i18n/locale';
 import type { CommunityInfo, CommunityMembersRow } from '@/lib/types';
 import {
@@ -58,24 +59,30 @@ const TRUST_GUIDE_COPY = {
     approvalDescription:
       'Approval-required communities review requests before new members can browse or post rides there.',
     verifiedLabel: 'Verified communities',
-    publicLabel: 'Public communities',
+    phaseLabel: 'Current phase',
+    phaseDescription: 'Only the four approved campus communities are available right now.',
     approvalLabel: 'Approval flow',
+    howToStart: 'Choose a community before searching or posting rides. If the community needs approval, send a request and wait for the admins.',
   },
   ar: {
     title: 'كيف تعمل الثقة في المجتمعات',
     approvalDescription:
       'تراجع المجتمعات التي تتطلب موافقة طلبات الانضمام قبل أن يتمكن الأعضاء الجدد من التصفح أو نشر الرحلات هناك.',
     verifiedLabel: 'المجتمعات الموثقة',
-    publicLabel: 'المجتمعات العامة',
+    phaseLabel: 'المرحلة الحالية',
+    phaseDescription: 'حاليًا تظهر فقط المجتمعات الجامعية الأربعة المعتمدة.',
     approvalLabel: 'آلية الموافقة',
+    howToStart: 'اختر مجتمعًا قبل البحث أو نشر الرحلات. إذا كان المجتمع يحتاج موافقة، أرسل طلب الانضمام وانتظر رد المسؤولين.',
   },
   he: {
     title: 'איך פועל אמון בקהילות',
     approvalDescription:
       'קהילות שדורשות אישור בודקות בקשות הצטרפות לפני שחברים חדשים יכולים לעיין או לפרסם שם נסיעות.',
     verifiedLabel: 'קהילות מאומתות',
-    publicLabel: 'קהילות ציבוריות',
+    phaseLabel: 'השלב הנוכחי',
+    phaseDescription: 'כרגע זמינות רק ארבע הקהילות המאושרות.',
     approvalLabel: 'תהליך אישור',
+    howToStart: 'בחרו קהילה לפני חיפוש או פרסום נסיעות. אם הקהילה דורשת אישור, שלחו בקשה והמתינו למנהלים.',
   },
 } as const;
 
@@ -295,6 +302,8 @@ export default function CommunityExplorer({
           </p>
         </div>
 
+        <GuideHint text={trustGuideCopy.howToStart} dismissible />
+
         {notice && (
           <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-900/20 dark:text-emerald-300">
             {notice}
@@ -331,10 +340,10 @@ export default function CommunityExplorer({
 
             <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 dark:border-amber-800/60 dark:bg-amber-900/20">
               <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                {trustGuideCopy.publicLabel}
+                {trustGuideCopy.phaseLabel}
               </p>
               <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-                {copy.lowerTrust}
+                {trustGuideCopy.phaseDescription}
               </p>
             </div>
 

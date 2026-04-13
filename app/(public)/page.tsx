@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import BrandLogo from '@/components/BrandLogo';
 import FounderStorySection from '@/components/public/FounderStorySection';
+import LangSwitcher from '@/components/public/LangSwitcher';
 import PhoneVideoPlayer from '@/components/public/PhoneVideoPlayer';
 import { getCurrentUser } from '@/lib/auth/session';
 import { getPostAuthRedirectPath } from '@/lib/auth/onboarding';
@@ -16,7 +17,7 @@ export default async function PublicLandingPage() {
 
   const cookieStore = await cookies();
   const langValue = cookieStore.get('NEXT_LOCALE')?.value as Lang | undefined;
-  const lang: Lang = langValue || 'en';
+  const lang: Lang = langValue || 'ar';
   const dict = dictionaries[lang] || dictionaries.en;
   const t = (key: DictKey) => translate(dict, key);
 
@@ -33,6 +34,7 @@ export default async function PublicLandingPage() {
             />
           </Link>
           <div className="flex items-center gap-2 sm:gap-3">
+            <LangSwitcher current={lang} />
             <Link href="/login" className="hidden sm:inline-flex rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors">
               {t('sign_in') || 'Sign in'}
             </Link>
@@ -144,7 +146,7 @@ export default async function PublicLandingPage() {
               {/* Phone glow */}
               <div className="absolute -inset-8 bg-gradient-to-b from-sky-400/20 to-cyan-400/10 dark:from-sky-500/10 dark:to-cyan-500/5 rounded-[60px] blur-2xl pointer-events-none" />
 
-              <div className="relative rounded-[44px] border-[6px] border-slate-900 dark:border-slate-700 bg-slate-950 h-[620px] shadow-2xl overflow-hidden ring-1 ring-slate-800/20">
+              <div className="relative rounded-[44px] border-[6px] border-slate-900 dark:border-slate-700 bg-slate-950 shadow-2xl overflow-hidden ring-1 ring-slate-800/20" style={{ aspectRatio: '300 / 620' }}>
                 {/* Notch overlay — sits above the video */}
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-28 h-6 bg-slate-900 rounded-b-2xl z-20 pointer-events-none" />
                 {/* Home indicator overlay */}

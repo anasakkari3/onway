@@ -10,11 +10,12 @@ import { createTrip as createTripService } from '@/lib/services/trip';
 
 export async function createTrip(input: {
   communityId: string;
-  originLat: number;
-  originLng: number;
+  /** Omit when geocoding is not available — stored as null in Firestore. */
+  originLat?: number | null;
+  originLng?: number | null;
   originName: string;
-  destinationLat: number;
-  destinationLng: number;
+  destinationLat?: number | null;
+  destinationLng?: number | null;
   destinationName: string;
   vehicleMakeModel: string;
   vehicleColor?: string | null;
@@ -29,6 +30,7 @@ export async function createTrip(input: {
   tripMode?: TripMode;
   recurringDays?: WeekdayIndex[];
   recurringDepartureTime?: string;
+  routeRequestId?: string | null;
 }) {
   return createTripService(input);
 }

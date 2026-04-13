@@ -56,7 +56,7 @@ const PRIVACY_COPY: Record<
         title: '1. Information we collect',
         bullets: [
           'Account information such as your authentication identity and email address.',
-          'Profile details you choose to provide, including display name, phone, city or area, age, gender, driver status, license declaration, preferences, and avatar.',
+          'Profile details you choose to provide, including display name, phone, city or area, age, gender, driver status, preferences, and avatar.',
           'Trip and community activity such as communities joined, trips posted, bookings, messages, reports, ratings, notifications, and safety-related actions.',
           'Operational event data needed to run the product, improve reliability, and investigate misuse.',
         ],
@@ -75,7 +75,7 @@ const PRIVACY_COPY: Record<
         title: '3. What other users can see',
         paragraphs: [
           'Other users may see parts of your information when it is necessary for the product to work. For example, members may see your display name, trip details, limited trust signals, and booking or coordination activity connected to shared trips or communities.',
-          'Private or placeholder-only document fields are not treated as public verification badges.',
+          'Private profile fields are only shown where they are needed for coordination, safety, or account support.',
         ],
       },
       {

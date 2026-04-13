@@ -33,7 +33,7 @@ function draw(frame: number, start: number, end: number, pathLen: number) {
 }
 
 // ─── Scene 1 — Stressed student ─────────────────────────────────────────────
-// "لسا بتتأخر عالجامعة؟"
+// "Running late to campus?"
 
 function Scene1() {
   const frame = useCurrentFrame();
@@ -42,9 +42,9 @@ function Scene1() {
   const wobble = Math.sin(frame * 0.45) * 2;
   const legSwing = Math.sin(frame * 0.38) * 16;
 
-  // Part 1: "لسا بتتأخر" — pops at frame 36
+  // Part 1: "Running late" — pops at frame 36
   const text1Scale = spring({ frame: Math.max(0, frame - 36), fps: 30, config: { damping: 10, stiffness: 340 } });
-  // Part 2: "عالجامعة؟" — follows 7 frames later (≈0.23s)
+  // Part 2: "to campus?" — follows 7 frames later (≈0.23s)
   const text2Scale = spring({ frame: Math.max(0, frame - 43), fps: 30, config: { damping: 10, stiffness: 320 } });
   // Shake settles in 12 frames (faster than before)
   const textShake = frame >= 36
@@ -66,7 +66,7 @@ function Scene1() {
           stroke="#EF4444" strokeWidth="2.5" opacity={fadeIn(frame, 10, 4)} />
         <text x="62" y="112" textAnchor="middle" fontSize="11"
           fill="#EF4444" fontWeight="bold" opacity={fadeIn(frame, 12, 5)}>
-          متأخر!
+          Late!
         </text>
 
         {/* Head — fast draw */}
@@ -150,20 +150,20 @@ function Scene1() {
           strokeDasharray={draw(frame, 22, 32, 75)} />
 
         {/* Main text split — reading rhythm */}
-        {/* Part 1: "لسا بتتأخر" */}
+        {/* Part 1: "Running late" */}
         <g transform={`translate(${150 + textShake}, 406) scale(${text1Scale})`}>
           <text
             textAnchor="middle" fontSize="25" fontWeight="800"
             fill="#EF4444" fontFamily="'Segoe UI', 'Noto Sans Arabic', Arial">
-            لسا بتتأخر
+            Running late
           </text>
         </g>
-        {/* Part 2: "عالجامعة؟" — follows 7f later, no shake */}
+        {/* Part 2: "to campus?" — follows 7f later, no shake */}
         <g transform={`translate(150, 434) scale(${text2Scale})`}>
           <text
             textAnchor="middle" fontSize="25" fontWeight="800"
             fill="#EF4444" fontFamily="'Segoe UI', 'Noto Sans Arabic', Arial">
-            عالجامعة؟
+            to campus?
           </text>
         </g>
 
@@ -304,7 +304,7 @@ function Scene2() {
           opacity={fadeIn(frame, 20, 6)}>
           <text textAnchor="middle" fontSize="21" fontWeight="800"
             fill="#1E293B" fontFamily="'Segoe UI', 'Noto Sans Arabic', Arial">
-            فوضى… ما في حل؟
+            Too much chaos?
           </text>
         </g>
 
@@ -378,19 +378,19 @@ function Scene3() {
         <ellipse cx="150" cy="270" rx="130" ry="175"
           fill="url(#phoneGlow)" opacity={phoneScale * 0.9} />
 
-        {/* "في طريقة أسهل." — calm float-in, delayed 0.2s after phone */}
+        {/* "There is an easier way." — calm float-in, delayed 0.2s after phone */}
         <g transform={`translate(0, ${textFloat})`}>
           <text x="150" y="528"
             textAnchor="middle" fontSize="19" fontWeight="700"
             fill="#0F172A" fontFamily="'Segoe UI', 'Noto Sans Arabic', Arial"
             opacity={fadeIn(motionF, 50, 16)}>
-            في طريقة أسهل.
+            There is an easier way.
           </text>
           <text x="150" y="554"
             textAnchor="middle" fontSize="13" fontWeight="400"
             fill="#64748B" fontFamily="'Segoe UI', 'Noto Sans Arabic', Arial"
             opacity={fadeIn(motionF, 58, 14)}>
-            بطريقك — رحلات جامعية منظمة
+            Batreeqak organizes campus rides
           </text>
         </g>
 
@@ -410,7 +410,7 @@ function Scene3() {
             textAnchor="middle" fontSize="13" fontWeight="700"
             fill="white" fontFamily="'Segoe UI', Arial"
             opacity={uiIn}>
-            بطريقك 🚗
+            Batreeqak
           </text>
 
           {/* Search bar */}
@@ -421,7 +421,7 @@ function Scene3() {
             textAnchor="middle" fontSize="10" fill="#94A3B8"
             fontFamily="'Segoe UI', Arial"
             opacity={cardIn(28)}>
-            🔍  ابحث عن رحلة...
+            Search rides
           </text>
 
           {/* Trip card 1 */}
@@ -435,16 +435,16 @@ function Scene3() {
             opacity={cardIn(34)} />
           <text x="112" y="168" fontSize="9" fontWeight="600"
             fill="#1E293B" fontFamily="'Segoe UI', Arial"
-            opacity={cardIn(34)}>محمد أ.</text>
+            opacity={cardIn(34)}>Mohammad A.</text>
           <text x="112" y="180" fontSize="8" fill="#64748B"
             fontFamily="'Segoe UI', Arial"
-            opacity={cardIn(34)}>عمّان ← الجامعة</text>
+            opacity={cardIn(34)}>Amman to Campus</text>
           <rect x="170" y="157" width="38" height="14" rx="7"
             fill="#0EA5E9" opacity={cardIn(36)} />
           <text x="189" y="167" textAnchor="middle" fontSize="7"
             fontWeight="700" fill="white"
             fontFamily="'Segoe UI', Arial"
-            opacity={cardIn(36)}>8:30 ص</text>
+             opacity={cardIn(36)}>8:30 AM</text>
 
           {/* Trip card 2 */}
           <rect x="82" y="206" width="136" height="48" rx="10"
@@ -457,16 +457,16 @@ function Scene3() {
             opacity={cardIn(40)} />
           <text x="112" y="224" fontSize="9" fontWeight="600"
             fill="#1E293B" fontFamily="'Segoe UI', Arial"
-            opacity={cardIn(40)}>سارة م.</text>
+            opacity={cardIn(40)}>Sara M.</text>
           <text x="112" y="236" fontSize="8" fill="#64748B"
             fontFamily="'Segoe UI', Arial"
-            opacity={cardIn(40)}>الصويفية ← الجامعة</text>
+            opacity={cardIn(40)}>Sweifieh to Uni</text>
           <rect x="170" y="213" width="38" height="14" rx="7"
             fill="#0EA5E9" opacity={cardIn(42)} />
           <text x="189" y="223" textAnchor="middle" fontSize="7"
             fontWeight="700" fill="white"
             fontFamily="'Segoe UI', Arial"
-            opacity={cardIn(42)}>8:45 ص</text>
+             opacity={cardIn(42)}>8:45 AM</text>
 
           {/* Home bar */}
           <rect x="130" y="344" width="40" height="3" rx="2"
@@ -483,7 +483,7 @@ function Scene3() {
           <text x="20" y="356"
             fontSize="11" fill="#0EA5E9" fontWeight="600"
             fontFamily="'Segoe UI', Arial"
-            opacity={fadeIn(frame, 58)}>تطبيقنا</text>
+            opacity={fadeIn(frame, 58)}>Ride app</text>
         </g>
 
         {/* Bottom text */}
@@ -491,7 +491,7 @@ function Scene3() {
           textAnchor="middle" fontSize="17" fontWeight="700"
           fill="#0F172A" fontFamily="'Segoe UI', 'Noto Sans Arabic', Arial"
           opacity={fadeIn(frame, 60)}>
-          رحلات منظمة بنقرة واحدة
+          Campus rides in one tap
         </text>
       </svg>
     </AbsoluteFill>
@@ -519,7 +519,7 @@ function Scene4() {
           textAnchor="middle" fontSize="16" fontWeight="700"
           fill="#1E293B" fontFamily="'Segoe UI', 'Noto Sans Arabic', Arial"
           opacity={fadeIn(frame, 5)}>
-          اختر رحلتك 🎯
+          Choose your ride
         </text>
 
         {/* Large trip card */}
@@ -538,10 +538,10 @@ function Scene4() {
           opacity={fadeIn(frame, 12)}>👦</text>
         <text x="96" y="102" fontSize="13" fontWeight="700"
           fill="#1E293B" fontFamily="'Segoe UI', Arial"
-          opacity={fadeIn(frame, 14)}>أحمد السيد</text>
+          opacity={fadeIn(frame, 14)}>Ahmad S.</text>
         <text x="96" y="118" fontSize="11" fill="#64748B"
           fontFamily="'Segoe UI', Arial"
-          opacity={fadeIn(frame, 14)}>⭐ 4.9  |  40 رحلة</text>
+          opacity={fadeIn(frame, 14)}>4.9 rating  |  40 rides</text>
 
         {/* Route */}
         <circle cx="55" cy="150" r="5" fill="#38BDF8"
@@ -553,10 +553,10 @@ function Scene4() {
           opacity={fadeIn(frame, 20)} />
         <text x="68" y="155" fontSize="11" fontWeight="600"
           fill="#1E293B" fontFamily="'Segoe UI', Arial"
-          opacity={fadeIn(frame, 18)}>عمّان الغربية</text>
+          opacity={fadeIn(frame, 18)}>West Amman</text>
         <text x="68" y="187" fontSize="11" fontWeight="600"
           fill="#1E293B" fontFamily="'Segoe UI', Arial"
-          opacity={fadeIn(frame, 20)}>الجامعة الأردنية</text>
+          opacity={fadeIn(frame, 20)}>Campus gate</text>
 
         {/* Time & seats */}
         <rect x="50" y="200" width="68" height="22" rx="11"
@@ -564,19 +564,19 @@ function Scene4() {
           opacity={fadeIn(frame, 22)} />
         <text x="84" y="214" textAnchor="middle" fontSize="10" fontWeight="600"
           fill="#0EA5E9" fontFamily="'Segoe UI', Arial"
-          opacity={fadeIn(frame, 22)}>🕗  8:30 ص</text>
+          opacity={fadeIn(frame, 22)}>8:30 AM</text>
         <rect x="130" y="200" width="68" height="22" rx="11"
           fill="#F0FDF4" stroke="#BBF7D0" strokeWidth="1.5"
           opacity={fadeIn(frame, 24)} />
         <text x="164" y="214" textAnchor="middle" fontSize="10" fontWeight="600"
           fill="#10B981" fontFamily="'Segoe UI', Arial"
-          opacity={fadeIn(frame, 24)}>💺  مقعدان</text>
+          opacity={fadeIn(frame, 24)}>2 seats</text>
         <rect x="210" y="200" width="48" height="22" rx="11"
           fill="#FFF7ED" stroke="#FED7AA" strokeWidth="1.5"
           opacity={fadeIn(frame, 26)} />
         <text x="234" y="214" textAnchor="middle" fontSize="10" fontWeight="600"
           fill="#F59E0B" fontFamily="'Segoe UI', Arial"
-          opacity={fadeIn(frame, 26)}>3 ₪</text>
+          opacity={fadeIn(frame, 26)}>3 NIS</text>
 
         {/* Confirm booking button */}
         <g transform={`translate(150, 310) scale(${buttonScale}) translate(-110, -22)`}>
@@ -587,7 +587,7 @@ function Scene4() {
             fontSize="15" fontWeight="700" fill="white"
             fontFamily="'Segoe UI', 'Noto Sans Arabic', Arial"
             opacity={fadeIn(frame, 32)}>
-            تأكيد الحجز ✓
+            Confirm booking
           </text>
         </g>
 
@@ -621,7 +621,7 @@ function Scene4() {
           <text x="150" y="432"
             textAnchor="middle" fontSize="13" fontWeight="700"
             fill="#166534" fontFamily="'Segoe UI', 'Noto Sans Arabic', Arial">
-            تم الحجز بنجاح! 🎉
+            Booking confirmed
           </text>
         </g>
 
@@ -630,7 +630,7 @@ function Scene4() {
           textAnchor="middle" fontSize="14" fontWeight="600"
           fill="#94A3B8" fontFamily="'Segoe UI', Arial"
           opacity={fadeIn(frame, 62)}>
-          بنقرة واحدة وانتهى الأمر 👌
+          One tap and you are set
         </text>
       </svg>
     </AbsoluteFill>
@@ -644,37 +644,12 @@ function Scene5() {
   const { durationInFrames: dur } = useVideoConfig();
   const opacity = sceneFade(frame, dur);
 
-  function ChatBubble({
-    text, from, delay, isRight, emoji,
-  }: {
-    text: string; from: string; delay: number; isRight?: boolean; emoji?: string;
-  }) {
-    const bubbleOpacity = fadeIn(frame, delay);
-    const bubbleX = isRight ? 30 : 12;
-    const color = isRight ? '#0EA5E9' : '#F1F5F9';
-    const textColor = isRight ? 'white' : '#1E293B';
-    const align = isRight ? 'end' : 'start';
-    return (
-      <g opacity={bubbleOpacity}>
-        {!isRight && (
-          <circle cx="24" cy={0} r="10" fill="#FEF3C7" stroke="#F59E0B" strokeWidth="1.5" />
-        )}
-        {isRight && (
-          <circle cx="276" cy={0} r="10" fill="#E0F2FE" stroke="#38BDF8" strokeWidth="1.5" />
-        )}
-        <text x={isRight ? '276' : '24'} y="5"
-          textAnchor="middle" fontSize="10" fill="#64748B"
-          fontFamily="'Segoe UI', Arial">{isRight ? '👤' : '👦'}</text>
-      </g>
-    );
-  }
-
   const messages = [
-    { text: 'السلام عليكم، متأكد موعد الرحلة؟', isRight: false, delay: 8 },
-    { text: 'وعليكم السلام! اكيد الساعة ٨:٣٠ 😊', isRight: true, delay: 20 },
-    { text: 'وين موقع التلاقي؟', isRight: false, delay: 32 },
-    { text: 'قدام البوابة الرئيسية 📍', isRight: true, delay: 44 },
-    { text: 'تمام، شكراً! 👍', isRight: false, delay: 56 },
+    { text: 'Still at 8:30?', isRight: false, delay: 8 },
+    { text: 'Yes, 8:30.', isRight: true, delay: 20 },
+    { text: 'Pickup spot?', isRight: false, delay: 32 },
+    { text: 'Main gate.', isRight: true, delay: 44 },
+    { text: 'Perfect, thanks!', isRight: false, delay: 56 },
   ];
 
   return (
@@ -690,25 +665,23 @@ function Scene5() {
           opacity={fadeIn(frame, 5)}>👦</text>
         <text x="62" y="26" fontSize="12" fontWeight="700"
           fill="white" fontFamily="'Segoe UI', Arial"
-          opacity={fadeIn(frame, 5)}>أحمد السيد</text>
+          opacity={fadeIn(frame, 5)}>Ahmad S.</text>
         <text x="62" y="42" fontSize="10" fill="#BAE6FD"
           fontFamily="'Segoe UI', Arial"
-          opacity={fadeIn(frame, 6)}>🟢 متصل الآن</text>
+          opacity={fadeIn(frame, 6)}>Online</text>
 
         {/* Divider */}
         <rect x="20" y="74" width="260" height="20" rx="10"
           fill="#F1F5F9" opacity={fadeIn(frame, 6)} />
         <text x="150" y="87" textAnchor="middle" fontSize="9" fill="#94A3B8"
           fontFamily="'Segoe UI', Arial"
-          opacity={fadeIn(frame, 6)}>اليوم</text>
+          opacity={fadeIn(frame, 6)}>Today</text>
 
         {/* Message bubbles */}
         {messages.map((msg, i) => {
           const y = 112 + i * 72;
           const msgOpacity = fadeIn(frame, msg.delay);
-          const textX = msg.isRight ? 255 : 46;
           const textAnchor = msg.isRight ? 'end' : 'start';
-          const bubbleX = msg.isRight ? 255 - 10 - msg.text.length * 5.5 : 46;
           const bubbleW = Math.min(msg.text.length * 5.8 + 20, 180);
           const bubbleXPos = msg.isRight ? 255 - bubbleW : 46;
           return (
@@ -750,7 +723,7 @@ function Scene5() {
           textAnchor="middle" fontSize="15" fontWeight="600"
           fill="#1E293B" fontFamily="'Segoe UI', 'Noto Sans Arabic', Arial"
           opacity={fadeIn(frame, 60)}>
-          التنسيق أصبح سهلاً 💬
+          Coordination made simple
         </text>
       </svg>
     </AbsoluteFill>
@@ -758,7 +731,7 @@ function Scene5() {
 }
 
 // ─── Scene 6 — Arrived, relaxed ─────────────────────────────────────────────
-// "وصلت بسهولة"
+// "Arrived on time"
 
 function Scene6() {
   const frame = useCurrentFrame();
@@ -831,7 +804,7 @@ function Scene6() {
           <polygon points="150,238 95,260 205,260"
             fill="none" stroke="#94A3B8" strokeWidth="2" />
           <text x="150" y="255" textAnchor="middle" fontSize="8"
-            fill="#94A3B8" fontFamily="'Segoe UI', Arial">الجامعة</text>
+            fill="#94A3B8" fontFamily="'Segoe UI', Arial">Campus</text>
         </g>
 
         {/* Car sliding in */}
@@ -889,7 +862,7 @@ function Scene6() {
           textAnchor="middle" fontSize="28" fontWeight="800"
           fill="#065F46" fontFamily="'Segoe UI', 'Noto Sans Arabic', Arial"
           opacity={fadeIn(frame, 22)}>
-          وصلت بسهولة! 🎉
+          Arrived on time!
         </text>
 
         {/* Sub text */}
@@ -897,7 +870,7 @@ function Scene6() {
           textAnchor="middle" fontSize="15" fontWeight="600"
           fill="#047857" fontFamily="'Segoe UI', 'Noto Sans Arabic', Arial"
           opacity={fadeIn(frame, 28)}>
-          مع بطريقك كل يوم أحلى
+          Every ride feels clearer
         </text>
 
         {/* CTA-like badge */}
@@ -907,7 +880,7 @@ function Scene6() {
           textAnchor="middle" fontSize="13" fontWeight="700"
           fill="white" fontFamily="'Segoe UI', Arial"
           opacity={fadeIn(frame, 38)}>
-          ابدأ الآن — مجاناً ✨
+          Start now - free
         </text>
       </svg>
     </AbsoluteFill>

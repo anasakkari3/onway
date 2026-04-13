@@ -82,7 +82,7 @@ export function formatPriceLabel(
 ): string | null {
   if (priceCents == null) return null;
   if (priceCents === 0) return t('free');
-  return `$${(priceCents / 100).toFixed(2)}`;
+  return `₪${(priceCents / 100).toFixed(2)}`;
 }
 
 export function formatSeatCount(count: number, t: TranslationFn): string {

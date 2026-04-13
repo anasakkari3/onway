@@ -4,11 +4,25 @@ import { useState } from 'react';
 import Link from 'next/link';
 import type { NotificationsRow } from '@/lib/types';
 import { markAsRead, markAllAsRead } from './actions';
+import { trackClientEvent } from '@/lib/analytics/client-actions';
 import { useTranslation } from '@/lib/i18n/LanguageProvider';
 import { formatLocalizedDateTime } from '@/lib/i18n/locale';
 import { getLocalizedNotificationContent } from '@/lib/i18n/runtime-text';
 
 function NotificationIcon(props: { type: NotificationsRow['type'] }) {
+  if (props.type === 'route_alert') {
+    return (
+      <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M3 11h18" />
+        <path d="M5 11l2-5h10l2 5" />
+        <path d="M7 16h.01" />
+        <path d="M17 16h.01" />
+        <path d="M5 11v6" />
+        <path d="M19 11v6" />
+      </svg>
+    );
+  }
+
   if (props.type === 'message') {
     return (
       <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -111,6 +125,12 @@ export default function NotificationListClient({
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
+                      {/* Context label: why this notification was sent */}
+                      {notification.type === 'route_alert' && !notification.is_read && (
+                        <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-sky-500 dark:text-sky-400">
+                          {t('notif_alert_context')}
+                        </p>
+                      )}
                       <h3
                         className={`text-sm font-bold ${
                           notification.is_read
@@ -129,6 +149,33 @@ export default function NotificationListClient({
                       >
                         {localized.body}
                       </p>
+
+                      {/* Contextual action pill — only on unread cards with a destination */}
+                      {!notification.is_read && notification.link_url && (
+                        <span
+                          className={`mt-2.5 inline-flex items-center gap-1 rounded-full px-3 py-1 text-[11px] font-bold ${
+                            notification.type === 'route_alert'
+                              ? 'bg-sky-50 text-sky-700 dark:bg-sky-900/20 dark:text-sky-300'
+                              : notification.type === 'booking'
+                                ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300'
+                                : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
+                          }`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void trackClientEvent('notification_cta_clicked', { notification_type: notification.type });
+                          }}
+                        >
+                          {notification.type === 'route_alert' && t('notif_cta_view_ride')}
+                          {notification.type === 'message' && t('notif_cta_open_chat')}
+                          {notification.type === 'booking' && t('notif_cta_view_trip')}
+                          {notification.type === 'cancellation' && t('notif_cta_see_details')}
+                          {notification.type !== 'route_alert' &&
+                           notification.type !== 'message' &&
+                           notification.type !== 'booking' &&
+                           notification.type !== 'cancellation' && t('notif_cta_view')}
+                          {' '}→
+                        </span>
+                      )}
                     </div>
 
                     <div className="flex shrink-0 items-start gap-2">
@@ -175,6 +222,7 @@ export default function NotificationListClient({
               href={notification.link_url}
               className="block group"
               onClick={() => {
+                void trackClientEvent('notification_opened', { notification_type: notification.type });
                 if (!notification.is_read) {
                   setNotifications((prev) =>
                     prev.map((item) =>

@@ -1,8 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/lib/i18n/LanguageProvider';
+import SavedPlaceChips from '@/components/SavedPlaceChips';
+import type { SavedPlace } from '@/lib/services/savedPlaces';
 
 type Props = {
   communityId?: string;
@@ -11,6 +13,9 @@ type Props = {
   initialDriverGenderFilter?: string;
   clearHref?: string;
   communitySelectionRequired?: boolean;
+  savedPlaces?: SavedPlace[];
+  /** User's city_or_area — shown as home nudge if no home place saved */
+  cityOrArea?: string;
 };
 
 const COPY = {
@@ -59,6 +64,8 @@ export default function InlineSearch({
   initialDriverGenderFilter = 'any',
   clearHref = '/app',
   communitySelectionRequired = false,
+  savedPlaces = [],
+  cityOrArea,
 }: Props) {
   const router = useRouter();
   const { t, lang } = useTranslation();
@@ -66,6 +73,9 @@ export default function InlineSearch({
   const [origin, setOrigin] = useState(initialOrigin);
   const [destination, setDestination] = useState(initialDestination);
   const [driverGender, setDriverGender] = useState(initialDriverGenderFilter);
+  // Track which field the user last focused — chips fill that field
+  const activeFieldRef = useRef<'origin' | 'destination'>('origin');
+  const [activeField, setActiveField] = useState<'origin' | 'destination'>('origin');
 
   const hasActiveSearch = Boolean(origin.trim() || destination.trim() || driverGender !== 'any');
   const needsCommunitySelection = communitySelectionRequired && !communityId;
@@ -102,6 +112,7 @@ export default function InlineSearch({
             aria-label={copy.originAria}
             type="text"
             value={origin}
+            onFocus={() => { activeFieldRef.current = 'origin'; setActiveField('origin'); }}
             onChange={(e) => setOrigin(e.target.value)}
             placeholder={t('anywhere')}
             className="w-full bg-transparent px-3 pb-2 pt-0 text-[15px] font-medium text-slate-900 dark:text-slate-100 placeholder-slate-300 dark:placeholder-slate-600 focus:outline-none focus:ring-0"
@@ -118,6 +129,7 @@ export default function InlineSearch({
             aria-label={copy.destinationAria}
             type="text"
             value={destination}
+            onFocus={() => { activeFieldRef.current = 'destination'; setActiveField('destination'); }}
             onChange={(e) => setDestination(e.target.value)}
             placeholder={t('anywhere')}
             className="w-full bg-transparent px-3 pb-2 pt-0 text-[15px] font-medium text-slate-900 dark:text-slate-100 placeholder-slate-300 dark:placeholder-slate-600 focus:outline-none focus:ring-0"
@@ -174,6 +186,24 @@ export default function InlineSearch({
         <p className="px-2 text-xs font-medium text-amber-700 dark:text-amber-400">
           {copy.communityRequired}
         </p>
+      )}
+
+      {/* Saved place chips — fills whichever field was last focused */}
+      {(savedPlaces.length > 0 || cityOrArea) && (
+        <SavedPlaceChips
+          initialPlaces={savedPlaces}
+          lang={lang}
+          onSelect={(name) => {
+            if (activeFieldRef.current === 'destination') {
+              setDestination(name);
+            } else {
+              setOrigin(name);
+            }
+          }}
+          homeNudgeName={cityOrArea}
+          activeField={activeField}
+          compact
+        />
       )}
     </div>
   );

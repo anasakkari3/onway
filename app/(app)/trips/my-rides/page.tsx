@@ -2,11 +2,24 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import CommunityBadge from '@/components/CommunityBadge';
 import EmptyStateCard from '@/components/EmptyStateCard';
+import GuideHint from '@/components/GuideHint';
 import { getCurrentUser } from '@/lib/auth/session';
 import { getServerI18n } from '@/lib/i18n/server';
 import { formatLocalizedDateTime, formatSeatAvailability } from '@/lib/i18n/locale';
 import { getMyTripsAsDriver, getMyBookings } from '@/lib/services/trip';
 import { getTripStatusPresentationWithTranslation } from '@/lib/trips/presentation';
+
+const COPY = {
+  en: {
+    guide: 'This page collects rides you joined as a passenger and rides you published as a driver. Open any ride to manage booking, chat, or status.',
+  },
+  ar: {
+    guide: 'هذه الصفحة تجمع الرحلات التي حجزتها كراكب والرحلات التي نشرتها كسائق. افتح أي رحلة لإدارة الحجز أو الدردشة أو الحالة.',
+  },
+  he: {
+    guide: 'כאן מופיעות נסיעות שהצטרפתם אליהן כנוסעים ונסיעות שפרסמתם כנהגים. פתחו נסיעה כדי לנהל הזמנה, צ׳אט או סטטוס.',
+  },
+} as const;
 
 function PassengerIcon() {
   return (
@@ -35,6 +48,7 @@ export default async function MyRidesPage() {
   }
 
   const { lang, t } = await getServerI18n();
+  const copy = COPY[lang];
   const [myTrips, myBookings] = await Promise.all([getMyTripsAsDriver(), getMyBookings()]);
 
   return (
@@ -60,6 +74,8 @@ export default async function MyRidesPage() {
           </div>
         </div>
       </section>
+
+      <GuideHint text={copy.guide} variant="info" dismissible />
 
       {myBookings.length === 0 && myTrips.length === 0 ? (
         <EmptyStateCard

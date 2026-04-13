@@ -120,7 +120,10 @@ export default async function AdminAnalyticsPage(props: {
         getFunnelMetrics(selectedCommunity.id),
         getDailyTripsAndBookings(selectedCommunity.id),
       ])
-    : [[], []];
+    : [null, null];
+  // null means a load error occurred (already logged server-side); [] means genuinely empty.
+  const funnelError = funnel === null;
+  const dailyError = daily === null;
 
   return (
     <div className="p-4 max-w-4xl mx-auto">
@@ -178,60 +181,72 @@ export default async function AdminAnalyticsPage(props: {
       {selectedCommunity && (
         <section className="mb-8">
           <h2 className="text-lg font-medium text-slate-800 mb-3">{copy.funnel}</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full border border-slate-200 rounded-lg overflow-hidden">
-              <thead className="bg-slate-100">
-                <tr>
-                  <th className="text-left px-4 py-2 text-slate-700">{copy.event}</th>
-                  <th className="text-right px-4 py-2 text-slate-700">{copy.count}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {funnel.map((row) => (
-                  <tr key={row.event_name} className="border-t border-slate-200">
-                    <td className="px-4 py-2 text-slate-900">
-                      {copy.events[row.event_name] ?? row.event_name}
-                    </td>
-                    <td className="px-4 py-2 text-right text-slate-700">{row.count}</td>
+          {funnelError ? (
+            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              تعذّر تحميل بيانات القمع — راجع سجلات الخادم.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full border border-slate-200 rounded-lg overflow-hidden">
+                <thead className="bg-slate-100">
+                  <tr>
+                    <th className="text-left px-4 py-2 text-slate-700">{copy.event}</th>
+                    <th className="text-right px-4 py-2 text-slate-700">{copy.count}</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {funnel!.map((row) => (
+                    <tr key={row.event_name} className="border-t border-slate-200">
+                      <td className="px-4 py-2 text-slate-900">
+                        {copy.events[row.event_name] ?? row.event_name}
+                      </td>
+                      <td className="px-4 py-2 text-right text-slate-700">{row.count}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </section>
       )}
 
       {selectedCommunity && (
         <section>
           <h2 className="text-lg font-medium text-slate-800 mb-3">{copy.daily}</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full border border-slate-200 rounded-lg overflow-hidden">
-              <thead className="bg-slate-100">
-                <tr>
-                  <th className="text-left px-4 py-2 text-slate-700">{copy.date}</th>
-                  <th className="text-left px-4 py-2 text-slate-700">{copy.community}</th>
-                  <th className="text-right px-4 py-2 text-slate-700">{copy.trips}</th>
-                  <th className="text-right px-4 py-2 text-slate-700">{copy.bookings}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {daily.map((row) => (
-                  <tr key={`${row.date}-${row.community_id}`} className="border-t border-slate-200">
-                    <td className="px-4 py-2 text-slate-900">
-                      {formatLocalizedDate(lang, row.date, {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric',
-                      })}
-                    </td>
-                    <td className="px-4 py-2 text-slate-900">{row.community_name ?? row.community_id}</td>
-                    <td className="px-4 py-2 text-right text-slate-700">{row.trips}</td>
-                    <td className="px-4 py-2 text-right text-slate-700">{row.bookings}</td>
+          {dailyError ? (
+            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              تعذّر تحميل بيانات الرحلات اليومية — راجع سجلات الخادم.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full border border-slate-200 rounded-lg overflow-hidden">
+                <thead className="bg-slate-100">
+                  <tr>
+                    <th className="text-left px-4 py-2 text-slate-700">{copy.date}</th>
+                    <th className="text-left px-4 py-2 text-slate-700">{copy.community}</th>
+                    <th className="text-right px-4 py-2 text-slate-700">{copy.trips}</th>
+                    <th className="text-right px-4 py-2 text-slate-700">{copy.bookings}</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {daily!.map((row) => (
+                    <tr key={`${row.date}-${row.community_id}`} className="border-t border-slate-200">
+                      <td className="px-4 py-2 text-slate-900">
+                        {formatLocalizedDate(lang, row.date, {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                        })}
+                      </td>
+                      <td className="px-4 py-2 text-slate-900">{row.community_name ?? row.community_id}</td>
+                      <td className="px-4 py-2 text-right text-slate-700">{row.trips}</td>
+                      <td className="px-4 py-2 text-right text-slate-700">{row.bookings}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </section>
       )}
     </div>

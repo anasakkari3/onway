@@ -2,7 +2,12 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { DriverTrustSummary } from '../DriverTrustSummary';
 import CommunityBadge from '@/components/CommunityBadge';
-import type { CommunityType, TripPassengerGenderPreference, WeekdayIndex } from '@/lib/types';
+import type {
+  CommunityType,
+  TripPassengerGenderPreference,
+  TrustProfile,
+  WeekdayIndex,
+} from '@/lib/types';
 import type { Lang } from '@/lib/i18n/dictionaries';
 import {
   formatLocalizedTime,
@@ -38,6 +43,7 @@ type TripCardTrip = {
   driver_received_rating_avg?: number;
   driver_received_rating_count?: number;
   driver_completed_drives?: number;
+  driver_trust_profile?: TrustProfile | null;
   // Recurring metadata — may be absent (defensive)
   trip_mode?: string | null;
   recurring_days?: WeekdayIndex[] | null;
@@ -283,6 +289,7 @@ export function TripCard(props: { trip: TripCardTrip; t?: (k: string) => string;
                 ratingAvg={receivedRatingAvg}
                 ratingCount={receivedRatingCount}
                 completedDrives={trip.driver_completed_drives ?? 0}
+                trustProfile={trip.driver_trust_profile ?? null}
                 variant="compact"
               />
             </div>

@@ -27,8 +27,9 @@ import {
   canTransitionTripState,
   getEffectiveTripStatus,
 } from '@/lib/trips/lifecycle';
-import { getCompletedRideStats, getCompletedDriveCountForDriver } from './trust';
+import { getCompletedRideStats, getUserTrustProfile } from './trust';
 import { getCommunityById } from './community';
+import { isAllowedCommunityId } from '@/lib/community/allowed';
 import {
   MAX_DRIVER_NOTE_LENGTH,
   MAX_TRIP_RULES_NOTE_LENGTH,
@@ -44,6 +45,7 @@ import {
   MIN_RECURRING_DAYS,
   MAX_RECURRING_DAYS,
 } from '@/lib/trips/recurrence';
+import { markRouteRequestFulfilled, notifyRouteAlertsForTrip } from './activation';
 
 function withEffectiveStatus<T extends { status: TripStatus; seats_available: number }>(trip: T): T {
   return {
@@ -109,11 +111,12 @@ async function hydrateTripsWithCommunityInfo<T extends TripCommunitySnapshotTarg
 
 export type CreateTripInput = {
   communityId: string;
-  originLat: number;
-  originLng: number;
+  /** Geographic coordinates. Pass null/omit when geocoding is not available (MVP). */
+  originLat?: number | null;
+  originLng?: number | null;
   originName: string;
-  destinationLat: number;
-  destinationLng: number;
+  destinationLat?: number | null;
+  destinationLng?: number | null;
   destinationName: string;
   vehicleMakeModel: string;
   vehicleColor?: string | null;
@@ -136,6 +139,8 @@ export type CreateTripInput = {
   recurringDays?: WeekdayIndex[];
   /** "HH:MM" 24h. Required when tripMode==='recurring'. */
   recurringDepartureTime?: string;
+  /** Optional demand signal this trip is fulfilling. */
+  routeRequestId?: string | null;
 };
 
 function normalizeOptionalTripText(
@@ -282,7 +287,7 @@ export async function createTrip(input: CreateTripInput) {
       missingFields: tripCreationReadiness.missingFields,
     });
     throw new AppError(
-      `Trip creation requires driver-ready profile details. Missing or incomplete: ${describeProfileActionFields(tripCreationReadiness.missingFields)}. Update it on your profile page. Placeholder document selections do not count as verification.`,
+      `Trip creation requires driver-ready profile details. Missing or incomplete: ${describeProfileActionFields(tripCreationReadiness.missingFields)}. Update your profile, then try publishing the trip again.`,
       'PROFILE_INCOMPLETE',
       403
     );
@@ -314,11 +319,11 @@ export async function createTrip(input: CreateTripInput) {
     community_name: community.name,
     community_type: community.type,
     driver_id: user.id,
-    origin_lat: input.originLat,
-    origin_lng: input.originLng,
+    origin_lat: input.originLat ?? null,
+    origin_lng: input.originLng ?? null,
     origin_name: input.originName,
-    destination_lat: input.destinationLat,
-    destination_lng: input.destinationLng,
+    destination_lat: input.destinationLat ?? null,
+    destination_lng: input.destinationLng ?? null,
     destination_name: input.destinationName,
     vehicle_make_model: vehicleMakeModel,
     vehicle_color: vehicleColor,
@@ -357,6 +362,37 @@ export async function createTrip(input: CreateTripInput) {
     payload: { trip_id: ref.id },
   });
 
+  try {
+    await Promise.all([
+      markRouteRequestFulfilled({
+        routeRequestId: input.routeRequestId,
+        communityId: input.communityId,
+        tripId: ref.id,
+        tripOriginName: input.originName,
+        tripDestinationName: input.destinationName,
+        driverId: user.id,
+        db,
+      }),
+      notifyRouteAlertsForTrip({
+        tripId: ref.id,
+        trip: {
+          community_id: input.communityId,
+          driver_id: user.id,
+          origin_name: input.originName,
+          destination_name: input.destinationName,
+          departure_time: departureDate.toISOString(),
+        },
+        db,
+      }),
+    ]);
+  } catch (activationError) {
+    logWarn('trip.activation_side_effect_failed', {
+      tripId: ref.id,
+      userId: user.id,
+      error: activationError instanceof Error ? activationError.message : String(activationError),
+    });
+  }
+
   return { id: ref.id };
 }
 
@@ -368,6 +404,10 @@ export async function getTripById(tripId: string): Promise<TripWithDriver> {
   if (!doc.exists) throw new NotFoundError('Trip not found');
 
   let trip = withEffectiveStatus({ id: doc.id, ...doc.data() } as TripWithDriver);
+  if (!isAllowedCommunityId(trip.community_id)) {
+    throw new NotFoundError('Trip not found');
+  }
+
   if (!trip.community_name || !trip.community_type) {
     const community = await getCommunityById(trip.community_id, db);
     if (community) {
@@ -378,13 +418,22 @@ export async function getTripById(tripId: string): Promise<TripWithDriver> {
       };
     }
   }
-  const driver = await getUserProfile(trip.driver_id, db);
-  const driverCompletedDrives = await getCompletedDriveCountForDriver(trip.driver_id, db);
+  const [driver, driverTrustProfile] = await Promise.all([
+    getUserProfile(trip.driver_id, db),
+    getUserTrustProfile(trip.driver_id, db),
+  ]);
 
-  return { ...trip, driver, driver_completed_drives: driverCompletedDrives };
+  return {
+    ...trip,
+    driver,
+    driver_completed_drives: driverTrustProfile.driver_trips_count,
+    driver_trust_profile: driverTrustProfile,
+  };
 }
 
 export async function getTripsByCommunity(communityId: string): Promise<TripWithDriver[]> {
+  if (!isAllowedCommunityId(communityId)) return [];
+
   const db = getAdminFirestore();
   const snap = await db
     .collection('trips')
@@ -397,10 +446,15 @@ export async function getTripsByCommunity(communityId: string): Promise<TripWith
 
   const driverIds = [...new Set(snap.docs.map((d) => d.data().driver_id as string))];
   const userMap = new Map<string, UserProfile>();
+  const trustMap = new Map<string, Awaited<ReturnType<typeof getUserTrustProfile>>>();
 
   for (const driverId of driverIds) {
-    const profile = await getUserProfile(driverId, db);
+    const [profile, trustProfile] = await Promise.all([
+      getUserProfile(driverId, db),
+      getUserTrustProfile(driverId, db),
+    ]);
     if (profile) userMap.set(driverId, profile);
+    trustMap.set(driverId, trustProfile);
   }
 
   const trips = snap.docs.map((d) => {
@@ -409,6 +463,8 @@ export async function getTripsByCommunity(communityId: string): Promise<TripWith
       id: d.id,
       ...data,
       driver: userMap.get(data.driver_id) ?? null,
+      driver_completed_drives: trustMap.get(data.driver_id)?.driver_trips_count ?? 0,
+      driver_trust_profile: trustMap.get(data.driver_id) ?? null,
     } as TripWithDriver);
   });
 
@@ -561,6 +617,7 @@ export async function getMyTripsAsDriver(): Promise<TripWithDriver[]> {
 
   const trips = snap.docs
     .map((d) => withEffectiveStatus({ id: d.id, ...d.data(), driver: null } as TripWithDriver))
+    .filter((trip) => isAllowedCommunityId(trip.community_id))
     .sort((a, b) => new Date(a.departure_time).getTime() - new Date(b.departure_time).getTime());
 
   return hydrateTripsWithCommunityInfo(trips, db);
@@ -568,6 +625,8 @@ export async function getMyTripsAsDriver(): Promise<TripWithDriver[]> {
 
 /** Get upcoming trips in a community for the home page preview */
 export async function getUpcomingCommunityTrips(communityId: string, limitCount = 3): Promise<TripWithDriver[]> {
+  if (!isAllowedCommunityId(communityId)) return [];
+
   const db = getAdminFirestore();
   const snap = await db
     .collection('trips')
@@ -586,8 +645,16 @@ export async function getUpcomingCommunityTrips(communityId: string, limitCount 
   // Fetch driver profiles
   const results: TripWithDriver[] = [];
   for (const trip of validTrips) {
-    const driver = await getUserProfile(trip.driver_id, db);
-    results.push({ ...trip, driver });
+    const [driver, driverTrustProfile] = await Promise.all([
+      getUserProfile(trip.driver_id, db),
+      getUserTrustProfile(trip.driver_id, db),
+    ]);
+    results.push({
+      ...trip,
+      driver,
+      driver_completed_drives: driverTrustProfile.driver_trips_count,
+      driver_trust_profile: driverTrustProfile,
+    });
   }
 
   return hydrateTripsWithCommunityInfo(results, db);
@@ -631,10 +698,19 @@ export async function getMyBookings(): Promise<TripWithDriver[]> {
     if (!tripDoc.exists) continue;
     const data = tripDoc.data()!;
     const trip = withEffectiveStatus({ id: tripDoc.id, ...data, driver: null } as TripWithDriver);
+    if (!isAllowedCommunityId(trip.community_id)) continue;
     if (!['scheduled', 'full', 'in_progress'].includes(trip.status)) continue;
 
-    const driver = await getUserProfile(data.driver_id, db);
-    results.push({ ...trip, driver });
+    const [driver, driverTrustProfile] = await Promise.all([
+      getUserProfile(data.driver_id, db),
+      getUserTrustProfile(data.driver_id, db),
+    ]);
+    results.push({
+      ...trip,
+      driver,
+      driver_completed_drives: driverTrustProfile.driver_trips_count,
+      driver_trust_profile: driverTrustProfile,
+    });
   }
 
   const hydratedResults = await hydrateTripsWithCommunityInfo(results, db);
@@ -665,8 +741,9 @@ export async function getMyPastTrips(): Promise<TripWithDriver[]> {
   const results: TripWithDriver[] = [];
 
   for (const d of driverSnap.docs) {
-    tripIds.add(d.id);
     const data = d.data();
+    if (!isAllowedCommunityId(data.community_id as string)) continue;
+    tripIds.add(d.id);
     const driver = await getUserProfile(data.driver_id, db);
     results.push(withEffectiveStatus({ id: d.id, ...data, driver } as TripWithDriver));
   }
@@ -677,6 +754,7 @@ export async function getMyPastTrips(): Promise<TripWithDriver[]> {
     const tripDoc = await db.collection('trips').doc(tid).get();
     if (!tripDoc.exists) continue;
     const data = tripDoc.data()!;
+    if (!isAllowedCommunityId(data.community_id as string)) continue;
     if (data.status !== 'completed' && data.status !== 'cancelled') continue;
     tripIds.add(tid);
     const driver = await getUserProfile(data.driver_id, db);

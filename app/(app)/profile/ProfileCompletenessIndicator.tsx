@@ -9,8 +9,6 @@ type Props = {
   hasAge: boolean;
   hasGender: boolean;
   hasIsDriver: boolean;
-  showDriverLicense: boolean;
-  hasDriverLicense: boolean;
 };
 
 const COPY = {
@@ -20,7 +18,7 @@ const COPY = {
     eyebrow: 'Personal details',
     complete: 'Your editable personal details are up to date',
     incomplete: 'Finish the personal details people will rely on',
-    helper: "Only editable profile fields count here. Verification placeholders and optional preferences do not. Driver's license only counts if you want to offer rides.",
+    helper: 'Only editable profile fields count here. Optional preferences do not affect completion.',
     missing: 'Update the missing details in the form below, then save your profile.',
     labels: {
       displayName: 'Display name',
@@ -29,7 +27,6 @@ const COPY = {
       age: 'Age',
       gender: 'Gender',
       driverStatus: 'Driver status',
-      driverLicense: "Driver's license",
     },
   },
   ar: {
@@ -38,7 +35,7 @@ const COPY = {
     eyebrow: 'التفاصيل الشخصية',
     complete: 'تفاصيلك الشخصية القابلة للتعديل مكتملة',
     incomplete: 'أكمل التفاصيل الشخصية التي سيعتمد عليها الآخرون',
-    helper: 'يتم احتساب الحقول القابلة للتعديل فقط هنا. لا يتم احتساب عناصر التحقق المؤقتة أو التفضيلات الاختيارية. يتم احتساب رخصة القيادة فقط إذا كنت تريد عرض رحلات.',
+    helper: 'يتم احتساب الحقول الأساسية القابلة للتعديل فقط هنا. التفضيلات الاختيارية لا تؤثر على اكتمال الملف.',
     missing: 'أكمل التفاصيل الناقصة في النموذج أدناه ثم احفظ ملفك الشخصي.',
     labels: {
       displayName: 'الاسم المعروض',
@@ -47,7 +44,6 @@ const COPY = {
       age: 'العمر',
       gender: 'الجنس',
       driverStatus: 'حالة السائق',
-      driverLicense: 'رخصة القيادة',
     },
   },
   he: {
@@ -56,7 +52,7 @@ const COPY = {
     eyebrow: 'פרטים אישיים',
     complete: 'הפרטים האישיים הניתנים לעריכה מעודכנים',
     incomplete: 'השלימו את הפרטים האישיים שאנשים יסתמכו עליהם',
-    helper: 'רק שדות פרופיל שניתנים לעריכה נספרים כאן. סמני אימות זמניים והעדפות אופציונליות לא נספרים. רישיון נהיגה נספר רק אם אתם רוצים להציע נסיעות.',
+    helper: 'רק שדות פרופיל בסיסיים שניתנים לעריכה נספרים כאן. העדפות אופציונליות לא משפיעות על השלמת הפרופיל.',
     missing: 'השלימו את הפרטים החסרים בטופס למטה ואז שמרו את הפרופיל.',
     labels: {
       displayName: 'שם תצוגה',
@@ -65,7 +61,6 @@ const COPY = {
       age: 'גיל',
       gender: 'מגדר',
       driverStatus: 'סטטוס נהג',
-      driverLicense: 'רישיון נהיגה',
     },
   },
 } as const;
@@ -77,8 +72,6 @@ export default function ProfileCompletenessIndicator({
   hasAge,
   hasGender,
   hasIsDriver,
-  showDriverLicense,
-  hasDriverLicense,
 }: Props) {
   const { lang } = useTranslation();
   const copy = COPY[lang];
@@ -90,7 +83,6 @@ export default function ProfileCompletenessIndicator({
     { label: copy.labels.age, complete: hasAge },
     { label: copy.labels.gender, complete: hasGender },
     { label: copy.labels.driverStatus, complete: hasIsDriver },
-    ...(showDriverLicense ? [{ label: copy.labels.driverLicense, complete: hasDriverLicense }] : []),
   ];
 
   const missingFields = fields.filter((field) => !field.complete);

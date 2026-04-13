@@ -1,458 +1,822 @@
 'use client';
 
 import Link from 'next/link';
-import { Suspense, useMemo, useState } from 'react';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { Suspense, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { FirebaseError } from 'firebase/app';
+import {
+  browserLocalPersistence,
+  browserSessionPersistence,
+  createUserWithEmailAndPassword,
+  onAuthStateChanged,
+  sendEmailVerification,
+  sendPasswordResetEmail,
+  setPersistence,
+  signInWithEmailAndPassword,
+  type User,
+} from 'firebase/auth';
 import BrandLogo from '@/components/BrandLogo';
 import { BRAND_NAME, brandCopy } from '@/lib/brand/config';
-import { useTranslation } from '@/lib/i18n/LanguageProvider';
 import { getFirebaseAuth } from '@/lib/firebase/config';
+import { useTranslation } from '@/lib/i18n/LanguageProvider';
 import { setSessionAndSync } from './actions';
 
-type Mode = 'signin' | 'signup';
 type SupportedLang = 'en' | 'ar' | 'he';
+type AuthMode = 'login' | 'signup' | 'reset' | 'verify';
 
 type ScreenCopy = {
+  title: string;
   subtitle: string;
-  heroTitle: string;
-  heroDescription: string;
-  signin: string;
+  login: string;
   signup: string;
-  fullName: string;
-  fullNamePlaceholder: string;
+  forgot: string;
   email: string;
-  emailPlaceholder: string;
   password: string;
-  passwordPlaceholder: string;
-  passwordHint: string;
-  wait: string;
-  createAccount: string;
-  signinHint: string;
-  signupHint: string;
-  signInFailed: string;
-  emailInUse: string;
-  invalidCredentials: string;
+  confirmPassword: string;
+  remember: string;
+  loginButton: string;
+  signupButton: string;
+  resetButton: string;
+  working: string;
+  resetComplete: string;
   noAccount: string;
-  fullNameRequired: string;
+  hasAccount: string;
+  forgotPrompt: string;
+  backToLogin: string;
+  resetSent: string;
+  verificationTitle: string;
+  verificationBody: (email: string) => string;
+  verificationSent: string;
+  verifiedContinue: string;
+  resendVerification: string;
+  verifiedReturning: string;
+  passwordHelp: string;
+  passwordRules: string[];
+  passwordsDontMatch: string;
+  weakPassword: string;
   emailRequired: string;
-  passwordMin: string;
-  showPassword: string;
-  hidePassword: string;
+  passwordRequired: string;
   trustTitle: string;
   trustBullets: string[];
-  privacyTitle: string;
   privacyNote: string;
+  terms: string;
+  privacy: string;
+  errors: Record<string, string>;
 };
 
 const COPY: Record<SupportedLang, ScreenCopy> = {
   en: {
-    subtitle: 'Simple ride coordination for real communities.',
-    heroTitle: 'Sign in to a calmer, more trustworthy trip flow.',
-    heroDescription:
-      `${BRAND_NAME} keeps ride coordination scoped to communities, makes expectations clear, and stays honest about what trust features are already live.`,
-    signin: 'Sign in',
-    signup: 'Sign up',
-    fullName: 'Full name',
-    fullNamePlaceholder: 'Your full name',
+    title: `Welcome to ${BRAND_NAME}`,
+    subtitle: 'Sign in with email and password. New accounts verify their email once.',
+    login: 'Log in',
+    signup: 'Create account',
+    forgot: 'Forgot password?',
     email: 'Email',
-    emailPlaceholder: 'you@example.com',
     password: 'Password',
-    passwordPlaceholder: 'Enter your password',
-    passwordHint: 'At least 6 characters',
-    wait: 'Please wait...',
-    createAccount: 'Create account',
-    signinHint: 'Sign in to join communities and coordinate rides.',
-    signupHint: 'Create your account now, then finish the basic details people need to coordinate with you.',
-    signInFailed: 'Sign in failed',
-    emailInUse: 'This email is already registered. Sign in instead.',
-    invalidCredentials: 'Invalid email or password.',
-    noAccount: 'No account with this email. Sign up first.',
-    fullNameRequired: 'Add your full name to create an account.',
-    emailRequired: 'Enter the email address you want to use.',
-    passwordMin: 'Use at least 6 characters for your password.',
-    showPassword: 'Show',
-    hidePassword: 'Hide',
-    trustTitle: 'What to expect',
-    trustBullets: [
-      'Join with email first, then complete the basic profile details needed for trip coordination.',
-      'Public community bookings require a basic profile. Verified communities may apply stricter local rules.',
-      'Document verification uploads are not fully live yet, and the product does not pretend they are.',
+    confirmPassword: 'Confirm password',
+    remember: 'Remember this device',
+    loginButton: 'Log in',
+    signupButton: 'Create account',
+    resetButton: 'Send reset email',
+    working: 'Please wait...',
+    resetComplete: 'Password updated. Log in with your new password.',
+    noAccount: 'New here?',
+    hasAccount: 'Already have an account?',
+    forgotPrompt: 'Enter your email and we will send a password reset link.',
+    backToLogin: 'Back to login',
+    resetSent: 'Password reset email sent. Check your inbox.',
+    verificationTitle: 'Verify your email',
+    verificationBody: (email) =>
+      `We sent a verification email to ${email}. Open it, then come back here and continue.`,
+    verificationSent: 'Verification email sent.',
+    verifiedContinue: 'I verified my email',
+    resendVerification: 'Resend verification email',
+    verifiedReturning: 'Email verified. Redirecting...',
+    passwordHelp: 'Use a strong password:',
+    passwordRules: [
+      'At least 8 characters',
+      'One uppercase and one lowercase letter',
+      'One number',
+      'One symbol',
     ],
-    privacyTitle: 'Trust and privacy',
-    privacyNote:
-      'Profile details are used to help people recognize who they are coordinating with. Safety tools, moderation, and community scope are real product features. Fake verification claims are not.',
+    passwordsDontMatch: 'Passwords do not match.',
+    weakPassword: 'Choose a stronger password.',
+    emailRequired: 'Enter your email.',
+    passwordRequired: 'Enter your password.',
+    trustTitle: 'Before launch checklist',
+    trustBullets: [
+      'Returning users log in directly with email and password.',
+      'New users verify their email once before filling profile details.',
+      'Forgot password is handled by Firebase securely.',
+    ],
+    privacyNote: 'By continuing you agree to our ',
+    terms: 'Terms',
+    privacy: 'Privacy Policy',
+    errors: {
+      'auth/invalid-email': 'Enter a valid email address.',
+      'auth/user-not-found': 'No account found for this email.',
+      'auth/wrong-password': 'Incorrect password.',
+      'auth/invalid-credential': 'Email or password is incorrect.',
+      'auth/email-already-in-use': 'This email already has an account. Log in instead.',
+      'auth/too-many-requests': 'Too many attempts. Try again later.',
+      'auth/network-request-failed': 'Network error. Check your connection.',
+      EMAIL_NOT_VERIFIED: 'Please verify your email before entering the app.',
+    },
   },
   ar: {
-    subtitle: 'تنظيم رحلات بسيط وموثوق داخل مجتمعك.',
-    heroTitle: 'سجّل دخولك وابدأ رحلاتك بسهولة وثقة.',
-    heroDescription:
-      `يبقي ${BRAND_NAME} تنسيق الرحلات داخل المجتمعات، ويوضح التوقعات من البداية، ويبقى صريحًا بشأن ميزات الثقة التي أصبحت جاهزة فعلًا.`,
-    signin: 'تسجيل الدخول',
+    title: `أهلًا في ${BRAND_NAME}`,
+    subtitle: 'ادخل بالبريد وكلمة المرور. الحساب الجديد يحتاج تحقق بريد مرة واحدة فقط.',
+    login: 'تسجيل الدخول',
     signup: 'إنشاء حساب',
-    fullName: 'الاسم الكامل',
-    fullNamePlaceholder: 'اسمك الكامل',
+    forgot: 'نسيت كلمة المرور؟',
     email: 'البريد الإلكتروني',
-    emailPlaceholder: 'you@example.com',
     password: 'كلمة المرور',
-    passwordPlaceholder: 'أدخل كلمة المرور',
-    passwordHint: '6 أحرف على الأقل',
-    wait: 'جارٍ المتابعة...',
-    createAccount: 'إنشاء الحساب',
-    signinHint: 'سجّل الدخول للانضمام إلى المجتمعات وتنسيق الرحلات.',
-    signupHint: 'أنشئ حسابك الآن، ثم أكمل التفاصيل الأساسية التي يحتاجها الناس للتنسيق معك.',
-    signInFailed: 'فشل تسجيل الدخول. تأكد من بياناتك وحاول مرة أخرى.',
-    emailInUse: 'هذا البريد مستخدم بالفعل. جرّب تسجيل الدخول بدلًا من ذلك.',
-    invalidCredentials: 'البريد الإلكتروني أو كلمة المرور غير صحيحة.',
-    noAccount: 'لا يوجد حساب بهذا البريد. أنشئ حسابًا أولًا.',
-    fullNameRequired: 'أضف اسمك الكامل لإنشاء حساب.',
-    emailRequired: 'أدخل البريد الإلكتروني الذي تريد استخدامه.',
-    passwordMin: 'استخدم 6 أحرف على الأقل لكلمة المرور.',
-    showPassword: 'إظهار',
-    hidePassword: 'إخفاء',
-    trustTitle: 'ما الذي ستتوقعه',
-    trustBullets: [
-      'ابدأ بالبريد الإلكتروني أولًا، ثم أكمل تفاصيل الملف الشخصي الأساسية المطلوبة لتنسيق الرحلات.',
-      'الحجز في المجتمعات العامة يتطلب ملفًا شخصيًا أساسيًا. وقد تكون للمجتمعات الموثقة شروط إضافية.',
-      'رفع مستندات التحقق ليس مكتملًا بعد، والمنتج لا يدّعي خلاف ذلك.',
+    confirmPassword: 'تأكيد كلمة المرور',
+    remember: 'تذكر هذا الجهاز',
+    loginButton: 'دخول',
+    signupButton: 'إنشاء الحساب',
+    resetButton: 'إرسال رابط إعادة التعيين',
+    working: 'ثواني...',
+    resetComplete: 'تم تحديث كلمة المرور. سجّل الدخول بكلمتك الجديدة.',
+    noAccount: 'مستخدم جديد؟',
+    hasAccount: 'عندك حساب؟',
+    forgotPrompt: 'أدخل بريدك وسنرسل لك رابطًا لتغيير كلمة المرور.',
+    backToLogin: 'العودة لتسجيل الدخول',
+    resetSent: 'تم إرسال رابط تغيير كلمة المرور. تحقق من بريدك.',
+    verificationTitle: 'تحقق من بريدك',
+    verificationBody: (email) =>
+      `أرسلنا رسالة تحقق إلى ${email}. افتحها، ثم ارجع لهذه الصفحة واضغط متابعة.`,
+    verificationSent: 'تم إرسال رسالة التحقق.',
+    verifiedContinue: 'تحققت من بريدي',
+    resendVerification: 'إرسال رسالة تحقق جديدة',
+    verifiedReturning: 'تم التحقق. جاري التحويل...',
+    passwordHelp: 'استخدم كلمة مرور قوية:',
+    passwordRules: [
+      '8 أحرف على الأقل',
+      'حرف كبير وحرف صغير',
+      'رقم واحد',
+      'رمز واحد',
     ],
-    privacyTitle: 'الثقة والخصوصية',
-    privacyNote:
-      'تُستخدم بيانات الملف الشخصي لمساعدة الناس على معرفة من ينسقون معه. أدوات السلامة والإشراف ونطاق المجتمع ميزات حقيقية في المنتج، أما ادعاءات التحقق الوهمية فليست موجودة.',
+    passwordsDontMatch: 'كلمتا المرور غير متطابقتين.',
+    weakPassword: 'اختر كلمة مرور أقوى.',
+    emailRequired: 'أدخل بريدك الإلكتروني.',
+    passwordRequired: 'أدخل كلمة المرور.',
+    trustTitle: 'جاهز للتجربة الأولى',
+    trustBullets: [
+      'المستخدم المسجل يدخل مباشرة بالبريد وكلمة المرور.',
+      'المستخدم الجديد يتحقق من بريده مرة واحدة قبل تعبئة بياناته.',
+      'نسيت كلمة المرور مرتبطة مباشرة بـ Firebase.',
+    ],
+    privacyNote: 'بالمتابعة أنت توافق على ',
+    terms: 'الشروط',
+    privacy: 'سياسة الخصوصية',
+    errors: {
+      'auth/invalid-email': 'أدخل بريدًا إلكترونيًا صحيحًا.',
+      'auth/user-not-found': 'لا يوجد حساب بهذا البريد.',
+      'auth/wrong-password': 'كلمة المرور غير صحيحة.',
+      'auth/invalid-credential': 'البريد أو كلمة المرور غير صحيحين.',
+      'auth/email-already-in-use': 'يوجد حساب بهذا البريد. سجّل دخول بدلًا من إنشاء حساب جديد.',
+      'auth/too-many-requests': 'محاولات كثيرة. جرّب لاحقًا.',
+      'auth/network-request-failed': 'مشكلة اتصال. تحقق من الإنترنت.',
+      EMAIL_NOT_VERIFIED: 'تحقق من بريدك قبل دخول التطبيق.',
+    },
   },
   he: {
-    subtitle: 'תיאום נסיעות פשוט ומסודר לקהילות אמיתיות.',
-    heroTitle: 'התחברו לזרימת נסיעות רגועה ואמינה יותר.',
-    heroDescription:
-      `${BRAND_NAME} שומרת את תיאום הנסיעות בתוך קהילות, מבהירה ציפיות מראש, ונשארת כנה לגבי אילו שכבות אמון כבר פעילות בפועל.`,
-    signin: 'התחברות',
+    title: `ברוכים הבאים ל-${BRAND_NAME}`,
+    subtitle: 'התחברו עם אימייל וסיסמה. חשבון חדש מאמת אימייל פעם אחת.',
+    login: 'התחברות',
     signup: 'יצירת חשבון',
-    fullName: 'שם מלא',
-    fullNamePlaceholder: 'השם המלא שלך',
+    forgot: 'שכחת סיסמה?',
     email: 'אימייל',
-    emailPlaceholder: 'you@example.com',
     password: 'סיסמה',
-    passwordPlaceholder: 'הקלידו את הסיסמה שלכם',
-    passwordHint: 'לפחות 6 תווים',
-    wait: 'טוען...',
-    createAccount: 'יצירת חשבון',
-    signinHint: 'התחברו כדי להצטרף לקהילות ולתאם נסיעות.',
-    signupHint: 'צרו את החשבון עכשיו, ואז השלימו את הפרטים הבסיסיים שאנשים צריכים כדי לתאם אתכם.',
-    signInFailed: 'ההתחברות נכשלה',
-    emailInUse: 'האימייל הזה כבר רשום. נסו להתחבר במקום.',
-    invalidCredentials: 'האימייל או הסיסמה שגויים.',
-    noAccount: 'אין חשבון עם האימייל הזה. צרו חשבון קודם.',
-    fullNameRequired: 'הוסיפו שם מלא כדי ליצור חשבון.',
-    emailRequired: 'הזינו את כתובת האימייל שבה תרצו להשתמש.',
-    passwordMin: 'השתמשו בסיסמה של לפחות 6 תווים.',
-    showPassword: 'הצג',
-    hidePassword: 'הסתר',
-    trustTitle: 'למה לצפות',
-    trustBullets: [
-      'מצטרפים עם אימייל תחילה, ואז משלימים את פרטי הפרופיל הבסיסיים הדרושים לתיאום נסיעות.',
-      'הזמנות בקהילות ציבוריות דורשות פרופיל בסיסי. לקהילות מאומתות עשויות להיות דרישות נוספות.',
-      'העלאת מסמכי אימות עדיין לא פעילה במלואה, והמוצר לא מעמיד פנים שכן.',
+    confirmPassword: 'אימות סיסמה',
+    remember: 'זכור את המכשיר הזה',
+    loginButton: 'כניסה',
+    signupButton: 'יצירת חשבון',
+    resetButton: 'שליחת איפוס סיסמה',
+    working: 'רגע...',
+    resetComplete: 'הסיסמה עודכנה. התחברו עם הסיסמה החדשה.',
+    noAccount: 'חדש כאן?',
+    hasAccount: 'כבר יש חשבון?',
+    forgotPrompt: 'הכניסו אימייל ונשלח קישור לאיפוס הסיסמה.',
+    backToLogin: 'חזרה להתחברות',
+    resetSent: 'נשלח אימייל לאיפוס סיסמה. בדקו את תיבת הדואר.',
+    verificationTitle: 'אימות אימייל',
+    verificationBody: (email) =>
+      `שלחנו אימייל אימות אל ${email}. פתחו אותו ואז חזרו לכאן כדי להמשיך.`,
+    verificationSent: 'אימייל אימות נשלח.',
+    verifiedContinue: 'אימתתי את האימייל',
+    resendVerification: 'שליחת אימות מחדש',
+    verifiedReturning: 'האימייל אומת. מעבירים...',
+    passwordHelp: 'השתמשו בסיסמה חזקה:',
+    passwordRules: [
+      'לפחות 8 תווים',
+      'אות גדולה ואות קטנה',
+      'מספר אחד',
+      'סימן אחד',
     ],
-    privacyTitle: 'אמון ופרטיות',
-    privacyNote:
-      'פרטי הפרופיל משמשים כדי לעזור לאנשים להבין עם מי הם מתאמים. כלי בטיחות, ניהול קהילה ותחימה קהילתית הם פיצ׳רים אמיתיים. טענות שווא על אימות לא קיימות כאן.',
+    passwordsDontMatch: 'הסיסמאות אינן תואמות.',
+    weakPassword: 'בחרו סיסמה חזקה יותר.',
+    emailRequired: 'הכניסו אימייל.',
+    passwordRequired: 'הכניסו סיסמה.',
+    trustTitle: 'מוכן לניסוי הראשון',
+    trustBullets: [
+      'משתמשים חוזרים נכנסים ישירות עם אימייל וסיסמה.',
+      'משתמש חדש מאמת אימייל פעם אחת לפני מילוי פרופיל.',
+      'איפוס סיסמה מנוהל בצורה מאובטחת דרך Firebase.',
+    ],
+    privacyNote: 'בהמשך אתם מסכימים ל',
+    terms: 'תנאים',
+    privacy: 'מדיניות פרטיות',
+    errors: {
+      'auth/invalid-email': 'הכניסו כתובת אימייל תקינה.',
+      'auth/user-not-found': 'לא נמצא חשבון לאימייל הזה.',
+      'auth/wrong-password': 'סיסמה שגויה.',
+      'auth/invalid-credential': 'האימייל או הסיסמה שגויים.',
+      'auth/email-already-in-use': 'כבר קיים חשבון לאימייל הזה. התחברו במקום.',
+      'auth/too-many-requests': 'יותר מדי ניסיונות. נסו מאוחר יותר.',
+      'auth/network-request-failed': 'שגיאת רשת. בדקו חיבור.',
+      EMAIL_NOT_VERIFIED: 'יש לאמת את האימייל לפני הכניסה לאפליקציה.',
+    },
   },
 };
 
+const PASSWORD_TESTS = [
+  (value: string) => value.length >= 8,
+  (value: string) => /[a-z]/.test(value) && /[A-Z]/.test(value),
+  (value: string) => /\d/.test(value),
+  (value: string) => /[^A-Za-z0-9]/.test(value),
+];
+
 function getCopy(lang: string): ScreenCopy {
-  return COPY[(lang === 'ar' || lang === 'he' ? lang : 'en') as SupportedLang];
+  const supportedLang = lang === 'ar' || lang === 'he' ? lang : 'en';
+  return brandCopy(COPY[supportedLang as SupportedLang]);
+}
+
+function normalizeEmail(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function isStrongPassword(value: string) {
+  return PASSWORD_TESTS.every((test) => test(value));
+}
+
+function getFirebaseAuthError(error: unknown, copy: ScreenCopy) {
+  if (error instanceof FirebaseError) {
+    return copy.errors[error.code] ?? error.message;
+  }
+
+  if (error instanceof Error) {
+    return copy.errors[error.message] ?? error.message;
+  }
+
+  return copy.errors['auth/network-request-failed'];
+}
+
+function getActionCodeSettings(path = '/login?verified=1') {
+  return {
+    url: `${window.location.origin}${path}`,
+    handleCodeInApp: false,
+  };
 }
 
 function LoginContent() {
-  const { lang, t } = useTranslation();
-  const copy = useMemo(() => brandCopy(getCopy(lang)), [lang]);
-  const [mode, setMode] = useState<Mode>('signin');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [displayName, setDisplayName] = useState('');
+  const searchParams = useSearchParams();
+  const { lang } = useTranslation();
+  const copy = useMemo(() => getCopy(lang), [lang]);
+  const nextPath = searchParams.get('next');
+
+  const [mode, setMode] = useState<AuthMode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [remember, setRemember] = useState(true);
+  const [pendingUser, setPendingUser] = useState<User | null>(null);
+  const [pendingEmail, setPendingEmail] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const submitLabel = useMemo(() => {
-    if (loading) return copy.wait;
-    return mode === 'signup' ? copy.createAccount : copy.signin;
-  }, [copy.createAccount, copy.signin, copy.wait, loading, mode]);
+  const passwordRuleStatus = PASSWORD_TESTS.map((test) => test(password));
+  const canSubmitSignup = passwordRuleStatus.every(Boolean) && password === confirmPassword;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-
-    if (mode === 'signup' && !displayName.trim()) {
-      setError(copy.fullNameRequired);
-      return;
+  const finishAuth = async (user: User) => {
+    await user.reload();
+    if (!user.emailVerified) {
+      setPendingUser(user);
+      setPendingEmail(user.email ?? email);
+      setMode('verify');
+      throw new Error('EMAIL_NOT_VERIFIED');
     }
-    if (!email.trim()) {
+
+    const token = await user.getIdToken(true);
+    const result = await setSessionAndSync(token, {
+      remember,
+      next: nextPath,
+    });
+    window.location.replace(result.redirectPath);
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const resumeVerifiedFirebaseUser = async (currentUser: User | null) => {
+      if (!currentUser) return;
+
+      try {
+        await currentUser.reload();
+        if (cancelled || !currentUser.emailVerified) return;
+        setLoading(true);
+        setNotice(copy.verifiedReturning);
+        await finishAuth(currentUser);
+      } catch {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    if (searchParams.get('verified') === '1') {
+      const auth = getFirebaseAuth();
+      const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+        void resumeVerifiedFirebaseUser(currentUser);
+      });
+
+      return () => {
+        cancelled = true;
+        unsubscribe();
+      };
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  // `finishAuth` intentionally stays outside dependencies because it performs navigation.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [copy.verifiedReturning, searchParams]);
+
+  const resetMessages = () => {
+    setError(null);
+    setNotice(null);
+  };
+
+  useEffect(() => {
+    if (searchParams.get('reset') === '1') {
+      setNotice(copy.resetComplete);
+      setMode('login');
+    }
+  }, [copy.resetComplete, searchParams]);
+
+  const switchMode = (nextMode: AuthMode) => {
+    resetMessages();
+    setMode(nextMode);
+  };
+
+  const handleLogin = async (event: React.FormEvent) => {
+    event.preventDefault();
+    resetMessages();
+
+    const normalizedEmail = normalizeEmail(email);
+    if (!normalizedEmail) {
       setError(copy.emailRequired);
       return;
     }
-    if (password.trim().length < 6) {
-      setError(copy.passwordMin);
+    if (!password) {
+      setError(copy.passwordRequired);
       return;
     }
 
     setLoading(true);
     try {
       const auth = getFirebaseAuth();
-      if (mode === 'signup') {
-        const { user } = await createUserWithEmailAndPassword(auth, email.trim(), password);
-        if (displayName.trim()) {
-          await updateProfile(user, { displayName: displayName.trim() });
-        }
-        const token = await user.getIdToken();
-        await setSessionAndSync(token);
-      } else {
-        const { user } = await signInWithEmailAndPassword(auth, email.trim(), password);
-        const token = await user.getIdToken();
-        await setSessionAndSync(token);
-      }
-      window.location.href = '/app';
-    } catch (err: unknown) {
-      let message: string = copy.signInFailed;
-      if (err && typeof err === 'object' && 'code' in err) {
-        const code = (err as { code: string }).code;
-        const msg = (err as { message?: string }).message;
-        if (code === 'auth/email-already-in-use') message = copy.emailInUse;
-        else if (code === 'auth/invalid-credential' || code === 'auth/wrong-password') message = copy.invalidCredentials;
-        else if (code === 'auth/user-not-found') message = copy.noAccount;
-        else if (msg && lang === 'en') message = msg;
-      }
-      setError(message);
+      await setPersistence(auth, remember ? browserLocalPersistence : browserSessionPersistence);
+      const credential = await signInWithEmailAndPassword(auth, normalizedEmail, password);
+      await finishAuth(credential.user);
+    } catch (authError) {
+      setError(getFirebaseAuthError(authError, copy));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSignup = async (event: React.FormEvent) => {
+    event.preventDefault();
+    resetMessages();
+
+    const normalizedEmail = normalizeEmail(email);
+    if (!normalizedEmail) {
+      setError(copy.emailRequired);
+      return;
+    }
+    if (!isStrongPassword(password)) {
+      setError(copy.weakPassword);
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError(copy.passwordsDontMatch);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const auth = getFirebaseAuth();
+      await setPersistence(auth, browserLocalPersistence);
+      const credential = await createUserWithEmailAndPassword(auth, normalizedEmail, password);
+      await sendEmailVerification(credential.user, getActionCodeSettings());
+      setPendingUser(credential.user);
+      setPendingEmail(normalizedEmail);
+      setMode('verify');
+      setNotice(copy.verificationSent);
+    } catch (authError) {
+      setError(getFirebaseAuthError(authError, copy));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePasswordReset = async (event: React.FormEvent) => {
+    event.preventDefault();
+    resetMessages();
+
+    const normalizedEmail = normalizeEmail(email);
+    if (!normalizedEmail) {
+      setError(copy.emailRequired);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await sendPasswordResetEmail(
+        getFirebaseAuth(),
+        normalizedEmail,
+        getActionCodeSettings('/login?reset=1')
+      );
+      setNotice(copy.resetSent);
+    } catch (authError) {
+      setError(getFirebaseAuthError(authError, copy));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerificationContinue = async () => {
+    resetMessages();
+    const user = pendingUser ?? getFirebaseAuth().currentUser;
+    if (!user) {
+      setMode('login');
+      setError(copy.errors.EMAIL_NOT_VERIFIED);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await finishAuth(user);
+    } catch (authError) {
+      setError(getFirebaseAuthError(authError, copy));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    resetMessages();
+    const user = pendingUser ?? getFirebaseAuth().currentUser;
+    if (!user) {
+      setMode('login');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await sendEmailVerification(user, getActionCodeSettings());
+      setNotice(copy.verificationSent);
+    } catch (authError) {
+      setError(getFirebaseAuthError(authError, copy));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="w-full max-w-sm space-y-6">
-      <div className="text-center">
-        <div className="mb-5 flex justify-center">
-          <BrandLogo lang={lang as SupportedLang} size="auth" priority className="drop-shadow-sm" />
-        </div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-          {mode === 'signin' ? copy.signin : copy.signup}
-        </h1>
-        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{copy.subtitle}</p>
-      </div>
+    <main className="flex min-h-screen items-center justify-center bg-gradient-to-b from-sky-50 via-white to-slate-100 px-4 py-8 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+      <div className="w-full max-w-md">
+        <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <div className="text-center">
+            <div className="mb-5 flex justify-center">
+              <BrandLogo lang={lang as SupportedLang} size="auth" priority className="drop-shadow-sm" />
+            </div>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+              {copy.title}
+            </h1>
+            <p className="mt-2 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
+              {copy.subtitle}
+            </p>
+          </div>
 
-      <div className="flex rounded-xl border border-slate-200 bg-slate-100/80 p-1 dark:border-slate-700 dark:bg-slate-800/60">
-        <button
-          type="button"
-          onClick={() => {
-            setMode('signin');
-            setError(null);
+          {mode !== 'verify' && (
+            <div className="mt-6 grid grid-cols-2 gap-2 rounded-lg bg-slate-100 p-1 dark:bg-slate-800">
+              <button
+                type="button"
+                onClick={() => switchMode('login')}
+                className={`rounded-md px-3 py-2 text-sm font-semibold transition-colors ${
+                  mode === 'login'
+                    ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-950 dark:text-white'
+                    : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+                }`}
+              >
+                {copy.login}
+              </button>
+              <button
+                type="button"
+                onClick={() => switchMode('signup')}
+                className={`rounded-md px-3 py-2 text-sm font-semibold transition-colors ${
+                  mode === 'signup'
+                    ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-950 dark:text-white'
+                    : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+                }`}
+              >
+                {copy.signup}
+              </button>
+            </div>
+          )}
+
+          {notice && (
+            <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300">
+              {notice}
+            </div>
+          )}
+
+          {error && (
+            <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300">
+              {error}
+            </div>
+          )}
+
+          {mode === 'login' && (
+            <form onSubmit={handleLogin} className="mt-6 space-y-4" noValidate>
+              <AuthFields
+                copy={copy}
+                email={email}
+                password={password}
+                setEmail={setEmail}
+                setPassword={setPassword}
+                resetMessages={resetMessages}
+                passwordAutoComplete="current-password"
+              />
+              <div className="flex items-center justify-between gap-3">
+                <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                  <input
+                    type="checkbox"
+                    checked={remember}
+                    onChange={(event) => setRemember(event.target.checked)}
+                    className="rounded border-slate-300 text-sky-600 focus:ring-sky-500"
+                  />
+                  {copy.remember}
+                </label>
+                <button
+                  type="button"
+                  onClick={() => switchMode('reset')}
+                  className="text-sm font-semibold text-sky-600 hover:text-sky-700 dark:text-sky-400"
+                >
+                  {copy.forgot}
+                </button>
+              </div>
+              <SubmitButton label={copy.loginButton} loadingLabel={copy.working} loading={loading} />
+            </form>
+          )}
+
+          {mode === 'signup' && (
+            <form onSubmit={handleSignup} className="mt-6 space-y-4" noValidate>
+              <AuthFields
+                copy={copy}
+                email={email}
+                password={password}
+                setEmail={setEmail}
+                setPassword={setPassword}
+                resetMessages={resetMessages}
+                passwordAutoComplete="new-password"
+              />
+              <div>
+                <label htmlFor="confirmPassword" className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                  {copy.confirmPassword}
+                </label>
+                <input
+                  id="confirmPassword"
+                  type="password"
+                  autoComplete="new-password"
+                  value={confirmPassword}
+                  onChange={(event) => {
+                    setConfirmPassword(event.target.value);
+                    resetMessages();
+                  }}
+                  className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition-all focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                />
+              </div>
+              <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950/60">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                  {copy.passwordHelp}
+                </p>
+                <ul className="mt-2 space-y-1">
+                  {copy.passwordRules.map((rule, index) => (
+                    <li
+                      key={rule}
+                      className={`text-sm ${
+                        passwordRuleStatus[index]
+                          ? 'text-emerald-600 dark:text-emerald-400'
+                          : 'text-slate-500 dark:text-slate-400'
+                      }`}
+                    >
+                      {passwordRuleStatus[index] ? 'OK' : '-'} {rule}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <SubmitButton
+                label={copy.signupButton}
+                loadingLabel={copy.working}
+                loading={loading}
+                disabled={!canSubmitSignup}
+              />
+            </form>
+          )}
+
+          {mode === 'reset' && (
+            <form onSubmit={handlePasswordReset} className="mt-6 space-y-4" noValidate>
+              <p className="text-sm leading-relaxed text-slate-500 dark:text-slate-400">
+                {copy.forgotPrompt}
+              </p>
+              <div>
+                <label htmlFor="resetEmail" className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                  {copy.email}
+                </label>
+                <input
+                  id="resetEmail"
+                  type="email"
+                  autoComplete="email"
+                  dir="ltr"
+                  value={email}
+                  onChange={(event) => {
+                    setEmail(event.target.value);
+                    resetMessages();
+                  }}
+                  className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition-all focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                />
+              </div>
+              <SubmitButton label={copy.resetButton} loadingLabel={copy.working} loading={loading} />
+              <button
+                type="button"
+                onClick={() => switchMode('login')}
+                className="w-full text-center text-sm font-semibold text-slate-500 hover:text-sky-600 dark:text-slate-400 dark:hover:text-sky-400"
+              >
+                {copy.backToLogin}
+              </button>
+            </form>
+          )}
+
+          {mode === 'verify' && (
+            <div className="mt-6 space-y-4 text-center">
+              <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-5 dark:border-amber-900/50 dark:bg-amber-950/30">
+                <p className="text-lg font-bold text-amber-900 dark:text-amber-200">
+                  {copy.verificationTitle}
+                </p>
+                <p className="mt-2 text-sm leading-relaxed text-amber-800 dark:text-amber-300">
+                  {copy.verificationBody(pendingEmail || email)}
+                </p>
+              </div>
+              <SubmitButton
+                label={copy.verifiedContinue}
+                loadingLabel={copy.working}
+                loading={loading}
+                onClick={handleVerificationContinue}
+              />
+              <button
+                type="button"
+                onClick={handleResendVerification}
+                disabled={loading}
+                className="w-full rounded-lg border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+              >
+                {copy.resendVerification}
+              </button>
+              <button
+                type="button"
+                onClick={() => switchMode('login')}
+                className="text-sm font-semibold text-slate-500 hover:text-sky-600 dark:text-slate-400 dark:hover:text-sky-400"
+              >
+                {copy.backToLogin}
+              </button>
+            </div>
+          )}
+
+          <div className="mt-6 rounded-lg border border-slate-200 bg-slate-50 px-4 py-4 dark:border-slate-800 dark:bg-slate-950/60">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              {copy.trustTitle}
+            </p>
+            <ul className="mt-2 space-y-1.5">
+              {copy.trustBullets.map((bullet) => (
+                <li key={bullet} className="text-sm text-slate-600 dark:text-slate-300">
+                  - {bullet}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <p className="mt-5 text-center text-xs text-slate-400 dark:text-slate-500">
+            {copy.privacyNote}
+            <Link href="/terms" className="underline hover:text-slate-600 dark:hover:text-slate-300">{copy.terms}</Link>
+            {' & '}
+            <Link href="/privacy" className="underline hover:text-slate-600 dark:hover:text-slate-300">{copy.privacy}</Link>
+          </p>
+        </section>
+      </div>
+    </main>
+  );
+}
+
+function AuthFields(props: {
+  copy: ScreenCopy;
+  email: string;
+  password: string;
+  setEmail: (value: string) => void;
+  setPassword: (value: string) => void;
+  resetMessages: () => void;
+  passwordAutoComplete: string;
+}) {
+  const { copy, email, password, setEmail, setPassword, resetMessages, passwordAutoComplete } = props;
+
+  return (
+    <>
+      <div>
+        <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
+          {copy.email}
+        </label>
+        <input
+          id="email"
+          type="email"
+          autoComplete="email"
+          dir="ltr"
+          value={email}
+          onChange={(event) => {
+            setEmail(event.target.value);
+            resetMessages();
           }}
-          className={`flex-1 rounded-lg py-2.5 text-sm font-semibold transition-all duration-200 ${
-            mode === 'signin'
-              ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-white'
-              : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
-          }`}
-        >
-          {copy.signin}
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setMode('signup');
-            setError(null);
+          className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition-all focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+        />
+      </div>
+      <div>
+        <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
+          {copy.password}
+        </label>
+        <input
+          id="password"
+          type="password"
+          autoComplete={passwordAutoComplete}
+          value={password}
+          onChange={(event) => {
+            setPassword(event.target.value);
+            resetMessages();
           }}
-          className={`flex-1 rounded-lg py-2.5 text-sm font-semibold transition-all duration-200 ${
-            mode === 'signup'
-              ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-white'
-              : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
-          }`}
-        >
-          {copy.signup}
-        </button>
+          className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition-all focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+        />
       </div>
+    </>
+  );
+}
 
-      <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-        {mode === 'signup' ? (
-          <div>
-            <label htmlFor="displayName" className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
-              {copy.fullName}
-            </label>
-            <input
-              id="displayName"
-              type="text"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              placeholder={copy.fullNamePlaceholder}
-              autoComplete="name"
-              aria-invalid={error === copy.fullNameRequired}
-              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-sky-400 dark:focus:ring-sky-400/20"
-            />
-          </div>
-        ) : null}
+function SubmitButton(props: {
+  label: string;
+  loadingLabel: string;
+  loading: boolean;
+  disabled?: boolean;
+  onClick?: () => void;
+}) {
+  const { label, loadingLabel, loading, disabled, onClick } = props;
 
-        <div>
-          <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
-            {copy.email}
-          </label>
-          <input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            data-testid="login-email"
-            placeholder={copy.emailPlaceholder}
-            required
-            autoComplete="email"
-            aria-invalid={error === copy.emailRequired}
-            className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-sky-400 dark:focus:ring-sky-400/20"
-          />
-        </div>
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={loading || disabled}
+        className="w-full rounded-lg bg-sky-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-sky-700 disabled:opacity-50 dark:bg-sky-500 dark:hover:bg-sky-600"
+      >
+        {loading ? loadingLabel : label}
+      </button>
+    );
+  }
 
-        <div>
-          <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
-            {copy.password}
-          </label>
-          <div className="relative">
-            <input
-              id="password"
-              type={showPassword ? 'text' : 'password'}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder={copy.passwordPlaceholder}
-              required
-              minLength={6}
-              autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
-              aria-invalid={error === copy.passwordMin}
-              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 pr-14 text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-sky-400 dark:focus:ring-sky-400/20"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword((value) => !value)}
-              aria-label={showPassword ? copy.hidePassword : copy.showPassword}
-              className="absolute inset-y-0 right-3 flex items-center text-xs font-semibold text-slate-500 transition-colors hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
-            >
-              {showPassword ? copy.hidePassword : copy.showPassword}
-            </button>
-          </div>
-          {mode === 'signup' ? (
-            <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">{copy.passwordHint}</p>
-          ) : null}
-        </div>
-
-        {error ? (
-          <div className="rounded-xl border border-red-200 bg-red-50 p-3 dark:border-red-900/50 dark:bg-red-900/20">
-            <p className="text-center text-sm font-medium text-red-700 dark:text-red-400">{error}</p>
-          </div>
-        ) : null}
-
-        <button
-          type="submit"
-          disabled={loading}
-          data-testid="login-submit"
-          className="btn-primary flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3.5 font-semibold text-white shadow-md transition-all disabled:opacity-50 disabled:transform-none"
-        >
-          {loading ? (
-            <svg className="h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8V0C5.37 0 0 5.37 0 12h4z" />
-            </svg>
-          ) : null}
-          {submitLabel}
-        </button>
-      </form>
-
-      <p className="text-center text-xs leading-relaxed text-slate-400 dark:text-slate-500">
-        {mode === 'signin' ? copy.signinHint : copy.signupHint}
-      </p>
-
-      <div className="rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4 dark:border-slate-700/70 dark:bg-slate-800/40">
-        <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-          {copy.trustTitle}
-        </p>
-        <ul className="mt-3 space-y-2 text-sm text-slate-600 dark:text-slate-300">
-          {copy.trustBullets.map((item) => (
-            <li key={item} className="flex items-start gap-2">
-              <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-sky-500" aria-hidden="true" />
-              <span>{item}</span>
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      <div className="border-t border-slate-200 pt-4 dark:border-slate-700/50">
-        <Link
-          href="/"
-          className="block w-full text-center text-sm font-medium text-slate-500 transition-colors hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
-        >
-          {t('continue_without_signin')}
-        </Link>
-      </div>
-    </div>
+  return (
+    <button
+      type="submit"
+      disabled={loading || disabled}
+      className="w-full rounded-lg bg-sky-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-sky-700 disabled:opacity-50 dark:bg-sky-500 dark:hover:bg-sky-600"
+    >
+      {loading ? loadingLabel : label}
+    </button>
   );
 }
 
 export default function LoginClient() {
-  const { lang } = useTranslation();
-  const copy = useMemo(() => brandCopy(getCopy(lang)), [lang]);
-
   return (
-    <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-sky-50 via-white to-cyan-50/50 p-4 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
-      <div className="pointer-events-none absolute right-[-5%] top-[-10%] h-[500px] w-[500px] rounded-full bg-sky-200/30 blur-3xl dark:bg-sky-900/20" />
-      <div className="pointer-events-none absolute bottom-[-10%] left-[-5%] h-[400px] w-[400px] rounded-full bg-cyan-200/20 blur-3xl dark:bg-cyan-900/10" />
-
-      <div className="relative z-10 mx-auto flex min-h-[calc(100vh-2rem)] w-full max-w-6xl items-center">
-        <div className="grid w-full items-center gap-6 lg:grid-cols-[1.05fr_0.85fr]">
-          <section className="rounded-[32px] border border-white/60 bg-white/60 p-8 shadow-elevated backdrop-blur-xl dark:border-slate-800/50 dark:bg-slate-900/45 sm:p-10 lg:p-12">
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-600 dark:text-sky-400">
-              {BRAND_NAME}
-            </p>
-            <h2 className="mt-4 max-w-xl text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
-              {copy.heroTitle}
-            </h2>
-            <p className="mt-4 max-w-2xl text-base leading-relaxed text-slate-600 dark:text-slate-300 sm:text-lg">
-              {copy.heroDescription}
-            </p>
-
-            <div className="mt-8 grid gap-3">
-              {copy.trustBullets.map((item) => (
-                <div
-                  key={item}
-                  className="rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-4 dark:border-slate-800 dark:bg-slate-950/40"
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sky-100 text-sky-600 dark:bg-sky-900/30 dark:text-sky-300">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                        <path d="m5 12 5 5L20 7" />
-                      </svg>
-                    </div>
-                    <p className="text-sm leading-relaxed text-slate-700 dark:text-slate-200">{item}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-8 rounded-2xl border border-sky-100 bg-sky-50/80 p-5 dark:border-sky-900/50 dark:bg-sky-950/30">
-              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-sky-600 dark:text-sky-300">
-                {copy.privacyTitle}
-              </p>
-              <p className="mt-3 text-sm leading-relaxed text-slate-700 dark:text-slate-200">
-                {copy.privacyNote}
-              </p>
-            </div>
-          </section>
-
-          <div className="rounded-3xl border border-white/50 bg-white/80 p-8 shadow-elevated backdrop-blur-xl dark:border-slate-800/50 dark:bg-slate-900/60">
-            <Suspense
-              fallback={
-                <div className="py-12 text-center">
-                  <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-sky-500 border-t-transparent" />
-                </div>
-              }
-            >
-              <LoginContent />
-            </Suspense>
-          </div>
-        </div>
-      </div>
-    </div>
+    <Suspense>
+      <LoginContent />
+    </Suspense>
   );
 }

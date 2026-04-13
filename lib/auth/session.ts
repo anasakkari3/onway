@@ -3,7 +3,8 @@ import { getAdminAuth } from '@/lib/firebase/admin';
 import { logWarn } from '@/lib/observability/logger';
 
 const AUTH_COOKIE_NAME = 'firebase-session';
-const AUTH_COOKIE_MAX_AGE = 60 * 60 * 24 * 5; // 5 days
+const AUTH_COOKIE_REMEMBER_MAX_AGE = 60 * 60 * 24 * 14; // Firebase session cookies allow up to 14 days.
+const AUTH_COOKIE_SESSION_MAX_AGE = 60 * 60 * 24;
 
 export type AuthUser = {
   id: string;
@@ -12,11 +13,18 @@ export type AuthUser = {
   photoURL: string | null;
 };
 
-export async function setSession(idToken: string) {
+export async function setSession(
+  idToken: string,
+  options?: { remember?: boolean }
+) {
   const adminAuth = getAdminAuth();
-  // Create a session cookie from the ID token. Valid for 5 days.
+  const maxAge = options?.remember === false
+    ? AUTH_COOKIE_SESSION_MAX_AGE
+    : AUTH_COOKIE_REMEMBER_MAX_AGE;
+
+  // Create a server session cookie from the client Firebase ID token.
   const sessionCookie = await adminAuth.createSessionCookie(idToken, {
-    expiresIn: AUTH_COOKIE_MAX_AGE * 1000,
+    expiresIn: maxAge * 1000,
   });
 
   const cookieStore = await cookies();
@@ -24,7 +32,7 @@ export async function setSession(idToken: string) {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
-    maxAge: AUTH_COOKIE_MAX_AGE,
+    maxAge,
     path: '/',
   });
 }

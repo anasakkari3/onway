@@ -5,7 +5,7 @@ import { trackEvent } from './analytics';
 import { normalizeLocationName, calculateLocationMatchScore } from '../utils/locations';
 import { UnauthorizedError } from '@/lib/utils/errors';
 import { BOOKABLE_TRIP_STATUSES, getEffectiveTripStatus } from '@/lib/trips/lifecycle';
-import { getCompletedDriveCountForDriver } from './trust';
+import { getUserTrustProfile } from './trust';
 import { getUserProfile } from './user';
 import { doesDriverGenderMatchFilter, normalizeDriverGenderFilter } from '@/lib/trips/comfort';
 
@@ -59,34 +59,55 @@ export async function searchTrips(params: SearchTripsParams) {
 
   const now = Date.now();
 
+  // Pre-compute all scored candidates without DB calls, then batch-fetch driver data.
+  const candidates: Array<{
+    doc: (typeof snap.docs)[number];
+    t: ReturnType<(typeof snap.docs)[number]['data']>;
+    baseScore: number;
+    finalScore: number;
+    hoursAway: number;
+  }> = [];
+
   for (const doc of snap.docs) {
     const t = doc.data();
 
-    // Shield: Driver is blocked or blocked us
     if (blockedIds.has(t.driver_id)) continue;
 
     if (getEffectiveTripStatus({
       status: t.status,
       seats_available: t.seats_available,
     }) !== 'scheduled') continue;
+
     const tripOrigin = normalizeLocationName(t.origin_name as string);
     const tripDest = normalizeLocationName(t.destination_name as string);
     if (t.seats_available <= 0) continue;
 
     const baseScore = calculateLocationMatchScore(tripOrigin, tripDest, originNorm, destNorm);
-    if (baseScore === 0) continue; // Skip unrelated routes
+    if (baseScore === 0) continue;
 
-    // Multi-factor Scoring: Time Penalty and Seats Bonus
     const msAway = new Date(t.departure_time).getTime() - now;
-    if (msAway < 0) continue; // Skip past trips
+    if (msAway < 0) continue;
 
     const hoursAway = msAway / (1000 * 60 * 60);
-    const timePenalty = Math.min(20, hoursAway * 0.5); // Max 20 points penalty for delays > 40hrs
-    const seatsBonus = Math.min(5, t.seats_available); // Slight bonus for more ease of booking
-
+    const timePenalty = Math.min(20, hoursAway * 0.5);
+    const seatsBonus = Math.min(5, t.seats_available);
     const finalScore = baseScore - timePenalty + seatsBonus;
 
-    const driverProfile = await getUserProfile(t.driver_id, db);
+    candidates.push({ doc, t, baseScore, finalScore, hoursAway });
+  }
+
+  // Batch-fetch driver profiles and trust profiles (one fetch per unique driver,
+  // not one per trip — avoids N+1 reads when a driver has multiple trips).
+  const uniqueDriverIds = [...new Set(candidates.map((c) => c.t.driver_id as string))];
+  const [profileEntries, trustEntries] = await Promise.all([
+    Promise.all(uniqueDriverIds.map(async (id) => [id, await getUserProfile(id, db)] as const)),
+    Promise.all(uniqueDriverIds.map(async (id) => [id, await getUserTrustProfile(id, db)] as const)),
+  ]);
+  const profileMap = new Map(profileEntries);
+  const trustMap = new Map(trustEntries);
+
+  for (const { doc, t, baseScore, finalScore, hoursAway } of candidates) {
+    const driverProfile = profileMap.get(t.driver_id) ?? null;
     if (!doesDriverGenderMatchFilter(driverProfile?.gender, driverGenderFilter)) {
       continue;
     }
@@ -94,7 +115,7 @@ export async function searchTrips(params: SearchTripsParams) {
     // Fetch driver trust data. Stored user ratings are generic received ratings, not driver-only ratings.
     const driverReceivedRatingAvg = driverProfile?.rating_avg ?? 0;
     const driverReceivedRatingCount = driverProfile?.rating_count ?? 0;
-    const driverCompletedDrives = await getCompletedDriveCountForDriver(t.driver_id, db);
+    const driverTrustProfile = trustMap.get(t.driver_id)!;
 
     const result: TripSearchResult = {
       id: doc.id,
@@ -111,7 +132,8 @@ export async function searchTrips(params: SearchTripsParams) {
       driver: driverProfile,
       driver_received_rating_avg: driverReceivedRatingAvg,
       driver_received_rating_count: driverReceivedRatingCount,
-      driver_completed_drives: driverCompletedDrives,
+      driver_completed_drives: driverTrustProfile.driver_trips_count,
+      driver_trust_profile: driverTrustProfile,
       origin_dist_m: 0,
       dest_dist_m: 0,
       time_diff_mins: Math.floor(hoursAway * 60),

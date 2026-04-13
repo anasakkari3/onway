@@ -2,12 +2,16 @@ import { getAdminFirestore } from '@/lib/firebase/firestore-admin';
 import { getAdminAuth } from '@/lib/firebase/admin';
 import { trackEvent } from './analytics';
 import type {
-  DocumentPlaceholderStatus,
+  NotificationPreferences,
   RequiredProfileField,
   UserProfile,
 } from '@/lib/types';
 import * as admin from 'firebase-admin';
 import { AppError } from '@/lib/utils/errors';
+import {
+  DEFAULT_NOTIFICATION_PREFERENCES,
+  normalizeNotificationPreferences,
+} from './notification-preferences';
 
 export type MyUserProfileFull = UserProfile & {
   phone: string | null;
@@ -15,12 +19,10 @@ export type MyUserProfileFull = UserProfile & {
   age: number | null;
   gender: string | null;
   is_driver: boolean | null;
-  has_driver_license: boolean | null;
   gender_preference: string | null;
-  license_image_status: DocumentPlaceholderStatus;
-  insurance_image_status: DocumentPlaceholderStatus;
-  license_declared: boolean;
-  insurance_declared: boolean;
+  email_notifications_enabled: boolean;
+  email_verified: boolean;
+  notification_preferences: NotificationPreferences;
 };
 
 export type RequiredProfileCompletionStatus = {
@@ -42,7 +44,6 @@ export const TRIP_CREATION_PROFILE_FIELDS = [
   'city_or_area',
   'age',
   'is_driver',
-  'has_driver_license',
 ] as const;
 
 type ProfileActionField = (typeof TRIP_CREATION_PROFILE_FIELDS)[number];
@@ -70,17 +71,12 @@ const ALLOWED_GENDER_PREFERENCES = new Set([
   'non-binary',
   'same_as_me',
 ]);
-const ALLOWED_DOCUMENT_PLACEHOLDER_STATUSES = new Set<DocumentPlaceholderStatus>([
-  'not_provided',
-  'provided_placeholder',
-]);
 const ACTION_PROFILE_FIELD_LABELS: Record<ProfileActionField, string> = {
   display_name: 'display name',
   phone: 'phone',
   city_or_area: 'city or area',
   age: 'age',
-  is_driver: 'driver status',
-  has_driver_license: "driver's license confirmation",
+    is_driver: 'driver status',
 };
 
 function normalizeOptionalText(value: string | null | undefined) {
@@ -188,10 +184,6 @@ function getMissingActionProfileFields<Field extends ProfileActionField>(
       }
       continue;
     }
-
-    if (field === 'has_driver_license' && profile.has_driver_license !== true) {
-      missingFields.push(field);
-    }
   }
 
   return missingFields;
@@ -246,54 +238,6 @@ function normalizeGenderPreference(value: string | null | undefined) {
   return normalized;
 }
 
-function normalizeDocumentPlaceholderStatus(
-  value: DocumentPlaceholderStatus | string | null | undefined,
-  fieldLabel: string
-): DocumentPlaceholderStatus {
-  if (value === undefined || value === null) {
-    return 'not_provided';
-  }
-
-  if (ALLOWED_DOCUMENT_PLACEHOLDER_STATUSES.has(value as DocumentPlaceholderStatus)) {
-    return value as DocumentPlaceholderStatus;
-  }
-
-  throw new AppError(`${fieldLabel} status is invalid.`, 'INVALID_PROFILE');
-}
-
-function resolveDocumentPlaceholderState(input: {
-  status?: DocumentPlaceholderStatus | string | null;
-  declared?: boolean | null;
-  fieldLabel: string;
-}) {
-  const hasStatus = input.status !== undefined;
-  const hasDeclared = input.declared !== undefined;
-
-  if (!hasStatus && !hasDeclared) {
-    return null;
-  }
-
-  const status = hasStatus
-    ? normalizeDocumentPlaceholderStatus(input.status, input.fieldLabel)
-    : input.declared
-      ? 'provided_placeholder'
-      : 'not_provided';
-  const declared =
-    typeof input.declared === 'boolean'
-      ? input.declared
-      : status === 'provided_placeholder';
-
-  if (status === 'provided_placeholder' && !declared) {
-    throw new AppError(`${input.fieldLabel} placeholder is inconsistent.`, 'INVALID_PROFILE');
-  }
-
-  if (status === 'not_provided' && declared) {
-    throw new AppError(`${input.fieldLabel} placeholder is inconsistent.`, 'INVALID_PROFILE');
-  }
-
-  return { status, declared };
-}
-
 export function getMissingRequiredProfileFields(
   profile: MyUserProfileFull | null
 ): RequiredProfileField[] {
@@ -334,7 +278,7 @@ export function getMissingRequiredProfileFields(
  * Ensures a user document exists in Firestore based on their Auth ID Token.
  */
 export async function ensureUserProfile(idToken: string) {
-  let decoded: { uid: string; email?: string; name?: string; picture?: string };
+  let decoded: { uid: string; email?: string; email_verified?: boolean; name?: string; picture?: string };
   try {
     decoded = await getAdminAuth().verifyIdToken(idToken);
   } catch {
@@ -352,6 +296,9 @@ export async function ensureUserProfile(idToken: string) {
       updated_at: string;
       display_name?: string | null;
       avatar_url?: string | null;
+      email_notifications_enabled?: boolean;
+      email_verified?: boolean;
+      notification_preferences?: NotificationPreferences;
     } = { updated_at: now };
 
     // Only seed from auth if Firestore fields are missing or null.
@@ -360,6 +307,15 @@ export async function ensureUserProfile(idToken: string) {
     }
     if (!existing.avatar_url && decoded.picture) {
       updates.avatar_url = decoded.picture;
+    }
+    if (typeof existing.email_notifications_enabled !== 'boolean') {
+      updates.email_notifications_enabled = true;
+    }
+    if (existing.email_verified !== decoded.email_verified) {
+      updates.email_verified = decoded.email_verified === true;
+    }
+    if (!existing.notification_preferences) {
+      updates.notification_preferences = DEFAULT_NOTIFICATION_PREFERENCES;
     }
 
     if (Object.keys(updates).length > 1) {
@@ -375,12 +331,10 @@ export async function ensureUserProfile(idToken: string) {
       age: null,
       gender: null,
       is_driver: null,
-      has_driver_license: null,
       gender_preference: null,
-      license_image_status: 'not_provided',
-      insurance_image_status: 'not_provided',
-      license_declared: false,
-      insurance_declared: false,
+      email_notifications_enabled: true,
+      email_verified: decoded.email_verified === true,
+      notification_preferences: DEFAULT_NOTIFICATION_PREFERENCES,
       avatar_url: decoded.picture ?? null,
       rating_avg: 0,
       rating_count: 0,
@@ -428,14 +382,6 @@ export async function getMyProfileFull(userId: string): Promise<MyUserProfileFul
   if (!doc.exists) return null;
 
   const d = doc.data()!;
-  const licenseImageStatus = normalizeDocumentPlaceholderStatus(
-    d.license_image_status,
-    'Driver license image'
-  );
-  const insuranceImageStatus = normalizeDocumentPlaceholderStatus(
-    d.insurance_image_status,
-    'Car insurance image'
-  );
 
   return {
     id: doc.id,
@@ -446,18 +392,10 @@ export async function getMyProfileFull(userId: string): Promise<MyUserProfileFul
     age: typeof d.age === 'number' && Number.isFinite(d.age) ? d.age : null,
     gender: d.gender ?? null,
     is_driver: typeof d.is_driver === 'boolean' ? d.is_driver : null,
-    has_driver_license: typeof d.has_driver_license === 'boolean' ? d.has_driver_license : null,
     gender_preference: d.gender_preference ?? null,
-    license_image_status: licenseImageStatus,
-    insurance_image_status: insuranceImageStatus,
-    license_declared:
-      typeof d.license_declared === 'boolean'
-        ? d.license_declared
-        : licenseImageStatus === 'provided_placeholder',
-    insurance_declared:
-      typeof d.insurance_declared === 'boolean'
-        ? d.insurance_declared
-        : insuranceImageStatus === 'provided_placeholder',
+    email_notifications_enabled: d.email_notifications_enabled !== false,
+    email_verified: d.email_verified === true,
+    notification_preferences: normalizeNotificationPreferences(d.notification_preferences),
     rating_avg: d.rating_avg ?? 0,
     rating_count: d.rating_count ?? 0,
   };
@@ -483,18 +421,12 @@ export async function updateUserProfile(
   userId: string,
   updates: {
     displayName: string;
-    avatarUrl: string;
     phone: string;
     cityOrArea: string;
     age: number | null;
     gender: string;
     isDriver: boolean | null;
-    hasDriverLicense?: boolean | null;
     genderPreference?: string | null;
-    licenseImageStatus?: DocumentPlaceholderStatus | null;
-    insuranceImageStatus?: DocumentPlaceholderStatus | null;
-    licenseDeclared?: boolean | null;
-    insuranceDeclared?: boolean | null;
   }
 ) {
   const displayName = normalizeRequiredText(updates.displayName, 'Display name');
@@ -512,33 +444,6 @@ export async function updateUserProfile(
     throw new AppError('Please choose whether you are a driver.', 'INVALID_PROFILE');
   }
 
-  if (
-    updates.isDriver === true &&
-    updates.hasDriverLicense !== undefined &&
-    updates.hasDriverLicense !== true
-  ) {
-    throw new AppError('Drivers must confirm they have a valid driver\'s license.', 'INVALID_PROFILE');
-  }
-
-  if (
-    updates.hasDriverLicense !== undefined &&
-    updates.hasDriverLicense !== null &&
-    typeof updates.hasDriverLicense !== 'boolean'
-  ) {
-    throw new AppError('Please choose whether you have a driver\'s license.', 'INVALID_PROFILE');
-  }
-
-  const licensePlaceholder = resolveDocumentPlaceholderState({
-    status: updates.licenseImageStatus,
-    declared: updates.licenseDeclared,
-    fieldLabel: 'Driver license image',
-  });
-  const insurancePlaceholder = resolveDocumentPlaceholderState({
-    status: updates.insuranceImageStatus,
-    declared: updates.insuranceDeclared,
-    fieldLabel: 'Car insurance image',
-  });
-
   const profileUpdates: Record<string, unknown> = {
     display_name: displayName,
     phone,
@@ -546,31 +451,54 @@ export async function updateUserProfile(
     age,
     gender,
     is_driver: updates.isDriver,
-    avatar_url: normalizeOptionalText(updates.avatarUrl),
     updated_at: new Date().toISOString(),
   };
-
-  if (updates.hasDriverLicense !== undefined) {
-    profileUpdates.has_driver_license = updates.hasDriverLicense;
-  }
 
   if (updates.genderPreference !== undefined) {
     profileUpdates.gender_preference = genderPreference;
   }
 
-  if (licensePlaceholder) {
-    profileUpdates.license_image_status = licensePlaceholder.status;
-    profileUpdates.license_declared = licensePlaceholder.declared;
-  }
-
-  if (insurancePlaceholder) {
-    profileUpdates.insurance_image_status = insurancePlaceholder.status;
-    profileUpdates.insurance_declared = insurancePlaceholder.declared;
-  }
-
   const db = getAdminFirestore();
   await db.collection('users').doc(userId).set(
     profileUpdates,
+    { merge: true }
+  );
+}
+
+export async function updateEmailNotificationsPreference(
+  userId: string,
+  enabled: boolean
+) {
+  const db = getAdminFirestore();
+  await db.collection('users').doc(userId).set(
+    {
+      email_notifications_enabled: enabled,
+      updated_at: new Date().toISOString(),
+    },
+    { merge: true }
+  );
+}
+
+export async function updateNotificationPreferences(
+  userId: string,
+  preferences: Partial<NotificationPreferences>
+) {
+  const normalizedExisting = normalizeNotificationPreferences(
+    (await getAdminFirestore().collection('users').doc(userId).get()).data()
+      ?.notification_preferences
+  );
+  const normalizedUpdates = normalizeNotificationPreferences({
+    ...normalizedExisting,
+    ...preferences,
+  });
+  const db = getAdminFirestore();
+
+  await db.collection('users').doc(userId).set(
+    {
+      email_notifications_enabled: true,
+      notification_preferences: normalizedUpdates,
+      updated_at: new Date().toISOString(),
+    },
     { merge: true }
   );
 }

@@ -4,6 +4,11 @@ import { getMyCommunities } from '@/lib/services/community';
 import CommunityBadge from '@/components/CommunityBadge';
 import CreateTripForm from './CreateTripForm';
 import { getServerI18n } from '@/lib/i18n/server';
+import { getCurrentUser } from '@/lib/auth/session';
+import { getSavedPlaces } from '@/lib/services/savedPlaces';
+import { getMyTripsAsDriver } from '@/lib/services/trip';
+import { getRouteRequestsForDriver } from '@/lib/services/activation';
+import RouteDemandPanel from './RouteDemandPanel';
 
 function buildNewTripHref(input: {
   communityId: string;
@@ -59,12 +64,35 @@ const COPY = {
 export default async function NewTripPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ community_id?: string; originName?: string; destinationName?: string }>;
+  searchParams?: Promise<{
+    community_id?: string;
+    originName?: string;
+    destinationName?: string;
+    request_id?: string;
+  }>;
 }) {
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const { lang } = await getServerI18n();
   const copy = COPY[lang];
-  const memberships = await getMyCommunities();
+
+  const user = await getCurrentUser();
+  const [memberships, savedPlaces, myDriverTrips] = await Promise.all([
+    getMyCommunities(),
+    user ? getSavedPlaces(user.id) : Promise.resolve([]),
+    user ? getMyTripsAsDriver() : Promise.resolve([]),
+  ]);
+
+  // Build deduplicated recent routes from driver trip history (last 5 unique routes)
+  const seenRoutes = new Set<string>();
+  const recentRoutes: { origin: string; destination: string }[] = [];
+  for (const trip of myDriverTrips) {
+    const key = `${trip.origin_name}|||${trip.destination_name}`;
+    if (!seenRoutes.has(key)) {
+      seenRoutes.add(key);
+      recentRoutes.push({ origin: trip.origin_name, destination: trip.destination_name });
+    }
+    if (recentRoutes.length >= 5) break;
+  }
   const joinedCommunities = memberships.map((membership) => ({
     ...membership.community,
     role: membership.role === 'admin' ? 'admin' : 'member',
@@ -131,6 +159,13 @@ export default async function NewTripPage({
   }
 
   const backHref = `/app?community_id=${encodeURIComponent(selectedCommunity.id)}`;
+  const routeRequests = await getRouteRequestsForDriver({
+    communityId: selectedCommunity.id,
+    originName: resolvedSearchParams?.originName,
+    destinationName: resolvedSearchParams?.destinationName,
+    preferredRequestId: resolvedSearchParams?.request_id,
+    limit: 4,
+  });
 
   return (
     <div className="p-4 max-w-lg mx-auto pb-8">
@@ -152,6 +187,11 @@ export default async function NewTripPage({
           <div className="rounded-xl bg-slate-50 dark:bg-slate-800 px-3 py-2">{copy.seatsPrice}</div>
         </div>
       </div>
+      <RouteDemandPanel
+        communityId={selectedCommunity.id}
+        requests={routeRequests}
+        lang={lang}
+      />
       <CreateTripForm
         communityId={selectedCommunity.id}
         communityName={selectedCommunity.name}
@@ -159,6 +199,9 @@ export default async function NewTripPage({
         initialOriginName={resolvedSearchParams?.originName ?? ''}
         initialDestinationName={resolvedSearchParams?.destinationName ?? ''}
         backHref={backHref}
+        savedPlaces={savedPlaces}
+        recentRoutes={recentRoutes}
+        routeRequestId={resolvedSearchParams?.request_id ?? null}
       />
     </div>
   );

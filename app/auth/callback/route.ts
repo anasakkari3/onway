@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-/** Legacy OAuth callback; with Firebase email/password auth we redirect to home. */
+/** Legacy OAuth callback; with Firebase email-link auth we redirect to home. */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const next = searchParams.get('next') ?? '/';

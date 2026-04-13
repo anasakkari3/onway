@@ -1,13 +1,19 @@
 import Link from 'next/link';
 import { searchTrips } from '@/lib/services/matching';
 import EmptyStateCard from '@/components/EmptyStateCard';
+import TrackedLink from '@/components/TrackedLink';
 import { TripCard } from './TripCard';
+import {
+  createRouteAlertAction,
+  createRouteDemandSignalAction,
+} from './actions';
 
 type SearchResultsProps = {
   communityId: string;
   originQuery: string;
   destQuery: string;
   driverGenderFilter: string;
+  routeDemandStatus?: string | null;
   lang: string;
   t: (key: string) => string;
 };
@@ -60,11 +66,15 @@ const COPY = {
   },
 } as const;
 
+// All activation copy is now in lib/i18n/dictionaries.ts (demand_* keys).
+// Use the t() prop to render them so Arabic and Hebrew users see their language.
+
 export default async function SearchResults({
   communityId,
   originQuery,
   destQuery,
   driverGenderFilter,
+  routeDemandStatus,
   lang,
   t,
 }: SearchResultsProps) {
@@ -87,40 +97,109 @@ export default async function SearchResults({
     browseParams.set('driverGender', driverGenderFilter);
   }
   const browseHref = `/app?${browseParams.toString()}`;
+  const demandSaved =
+    routeDemandStatus === 'requested' || routeDemandStatus === 'alerted'
+      ? {
+          title:
+            routeDemandStatus === 'requested'
+              ? t('demand_saved_title')
+              : t('demand_alert_saved_title'),
+          description:
+            routeDemandStatus === 'requested'
+              ? t('demand_saved_desc')
+              : t('demand_alert_saved_desc'),
+        }
+      : null;
+  const routeDemandFields = (
+    <>
+      <input type="hidden" name="communityId" value={communityId} />
+      <input type="hidden" name="originName" value={originQuery} />
+      <input type="hidden" name="destinationName" value={destQuery} />
+      <input type="hidden" name="driverGender" value={driverGenderFilter} />
+    </>
+  );
+  const requestRouteAction = (
+    <form action={createRouteDemandSignalAction}>
+      {routeDemandFields}
+      <button
+        type="submit"
+        className="inline-flex items-center justify-center rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-amber-600 dark:bg-amber-600 dark:hover:bg-amber-500"
+      >
+        {t('demand_request_and_alert')}
+      </button>
+    </form>
+  );
+  const alertRouteAction = (
+    <form action={createRouteAlertAction}>
+      {routeDemandFields}
+      <button
+        type="submit"
+        className="text-sm font-bold text-slate-600 dark:text-slate-300 hover:underline"
+      >
+        {t('demand_alert_only')}
+      </button>
+    </form>
+  );
 
   if (totalResults === 0) {
     return (
-      <EmptyStateCard
-        eyebrow={copy.routeTrips}
-        title={copy.noTripsFound}
-        description={copy.noTripsDesc}
-        tone="amber"
-        className="mt-2 animate-fade-in-up"
-        icon={
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="6.5" cy="6.5" r="2.5" />
-            <circle cx="17.5" cy="17.5" r="2.5" />
-            <path d="M8.5 8.5 15 15" />
-            <path d="M9 17.5h4" />
-          </svg>
-        }
-        actions={
-          <>
-            <Link
-              href={browseHref}
-              className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
-            >
-              {copy.browseAll}
-            </Link>
-            <Link
-              href={createHref}
-              className="inline-flex items-center justify-center rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-amber-600 dark:bg-amber-600 dark:hover:bg-amber-500"
-            >
-              {copy.createInstead}
-            </Link>
-          </>
-        }
-      />
+      <div className="space-y-3 mt-2 animate-fade-in-up">
+        {demandSaved && (
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4 dark:border-emerald-800 dark:bg-emerald-900/20">
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-300">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg>
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold text-emerald-900 dark:text-emerald-100">{demandSaved.title}</p>
+                <p className="mt-1 text-sm text-emerald-700 dark:text-emerald-300">{demandSaved.description}</p>
+                {routeDemandStatus === 'requested' && (
+                  <Link
+                    href={createHref}
+                    className="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-emerald-700 px-3 py-1.5 text-xs font-bold text-white transition-colors hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-500"
+                  >
+                    {copy.createInstead}
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                  </Link>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+        <EmptyStateCard
+          eyebrow={copy.routeTrips}
+          title={copy.noTripsFound}
+          description={`${copy.noTripsDesc} ${t('demand_note')}`}
+          tone="amber"
+          icon={
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="6.5" cy="6.5" r="2.5" />
+              <circle cx="17.5" cy="17.5" r="2.5" />
+              <path d="M8.5 8.5 15 15" />
+              <path d="M9 17.5h4" />
+            </svg>
+          }
+          actions={
+            <>
+              {requestRouteAction}
+              <TrackedLink
+                href={createHref}
+                trackEvent="create_trip_cta_clicked"
+                trackPayload={{ context: 'no_results' }}
+                className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+              >
+                {copy.createInstead}
+              </TrackedLink>
+              <Link
+                href={browseHref}
+                className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+              >
+                {copy.browseAll}
+              </Link>
+            </>
+          }
+        />
+      </div>
     );
   }
 
@@ -128,6 +207,19 @@ export default async function SearchResults({
     return (
       <div className="space-y-5 animate-fade-in-up mt-2">
         <div className="rounded-3xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 px-5 py-4 shadow-sm">
+          {demandSaved && (
+            <div className="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4 dark:border-emerald-800 dark:bg-emerald-900/20">
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-300">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg>
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-emerald-900 dark:text-emerald-100">{demandSaved.title}</p>
+                  <p className="mt-1 text-sm text-emerald-700 dark:text-emerald-300">{demandSaved.description}</p>
+                </div>
+              </div>
+            </div>
+          )}
           <div className="flex items-start gap-3">
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-slate-600 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:ring-slate-700">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -146,11 +238,18 @@ export default async function SearchResults({
             </div>
           </div>
           <div className="mt-4 flex flex-wrap gap-3">
-            <Link href={browseHref} className="text-sm font-bold text-sky-600 dark:text-sky-400 hover:underline">
-              {copy.browseAll}
-            </Link>
-            <Link href={createHref} className="text-sm font-bold text-slate-600 dark:text-slate-300 hover:underline">
+            <TrackedLink
+              href={createHref}
+              trackEvent="create_trip_cta_clicked"
+              trackPayload={{ context: 'similar_results' }}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
+            >
               {copy.createExactRoute}
+              <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </TrackedLink>
+            {alertRouteAction}
+            <Link href={browseHref} className="text-sm font-semibold text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300">
+              {copy.browseAll}
             </Link>
           </div>
         </div>
@@ -172,13 +271,15 @@ export default async function SearchResults({
           </div>
         </section>
 
-        <Link
+        <TrackedLink
           href={createHref}
+          trackEvent="create_trip_cta_clicked"
+          trackPayload={{ context: 'similar_results_bottom' }}
           className="flex items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-sm font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
         >
           <span>+</span>
           <span>{copy.exactRouteInstead}</span>
-        </Link>
+        </TrackedLink>
       </div>
     );
   }
@@ -220,16 +321,35 @@ export default async function SearchResults({
       )}
 
       <div className="rounded-3xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 px-4 py-4 shadow-sm">
+        {demandSaved && (
+          <div className="mb-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4 dark:border-emerald-800 dark:bg-emerald-900/20">
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-300">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg>
+              </div>
+              <div>
+                <p className="text-sm font-bold text-emerald-900 dark:text-emerald-100">{demandSaved.title}</p>
+                <p className="mt-1 text-sm text-emerald-700 dark:text-emerald-300">{demandSaved.description}</p>
+              </div>
+            </div>
+          </div>
+        )}
         <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
           {copy.wrongTime}
         </p>
         <div className="flex flex-wrap gap-3 mt-2">
-          <Link href={createHref} className="text-sm font-bold text-sky-600 dark:text-sky-400 hover:underline">
+          <TrackedLink
+            href={createHref}
+            trackEvent="create_trip_cta_clicked"
+            trackPayload={{ context: 'has_results_wrong_time' }}
+            className="text-sm font-bold text-sky-600 dark:text-sky-400 hover:underline"
+          >
             {copy.createInstead}
-          </Link>
+          </TrackedLink>
           <Link href={browseHref} className="text-sm font-bold text-slate-600 dark:text-slate-300 hover:underline">
             {copy.backToBrowse}
           </Link>
+          {alertRouteAction}
         </div>
       </div>
     </div>

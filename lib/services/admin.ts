@@ -1,9 +1,11 @@
 import { getAdminFirestore } from '@/lib/firebase/firestore-admin';
 import { getCurrentUser } from '@/lib/auth/session';
 import { isCommunityAdmin } from '@/lib/auth/permissions';
-import type { CommunityInfo, ReportsRow } from '@/lib/types';
+import type { CommunityInfo, ReportsRow, TrustProfile } from '@/lib/types';
 import { AppError, NotFoundError, UnauthorizedError } from '@/lib/utils/errors';
 import { createNotification } from './notification';
+import { isAllowedCommunityId } from '@/lib/community/allowed';
+import { getUserTrustProfile } from './trust';
 
 export async function getFunnelMetrics(communityId: string) {
   try {
@@ -36,8 +38,9 @@ export async function getFunnelMetrics(communityId: string) {
       event_name,
       count: counts[event_name] ?? 0,
     }));
-  } catch {
-    return [];
+  } catch (err) {
+    console.error('[admin] getFunnelMetrics failed:', err);
+    return null;
   }
 }
 
@@ -107,8 +110,9 @@ export async function getDailyTripsAndBookings(communityId: string) {
       }))
       .sort((a, b) => b.date.localeCompare(a.date))
       .slice(0, 100);
-  } catch {
-    return [];
+  } catch (err) {
+    console.error('[admin] getDailyTripsAndBookings failed:', err);
+    return null;
   }
 }
 
@@ -139,6 +143,8 @@ export type CommunityReportQueueItem = {
   context: string | null;
   created_at: string;
   status: ReportsRow['status'];
+  reporter_trust_profile?: TrustProfile | null;
+  reported_trust_profile?: TrustProfile | null;
 };
 
 function normalizeAdminCommunity(
@@ -162,6 +168,10 @@ async function requireCommunityAdminAccess(
   communityId: string,
   db: FirebaseFirestore.Firestore
 ): Promise<string> {
+  if (!isAllowedCommunityId(communityId)) {
+    throw new NotFoundError('Community not found');
+  }
+
   const user = await getCurrentUser();
   if (!user) throw new UnauthorizedError();
 
@@ -186,7 +196,10 @@ export async function getAdminCommunities(): Promise<ManagedAdminCommunity[]> {
 
   if (membershipSnap.empty) return [];
 
-  const communityIds = membershipSnap.docs.map((doc) => doc.data().community_id as string);
+  const communityIds = membershipSnap.docs
+    .map((doc) => doc.data().community_id as string)
+    .filter(isAllowedCommunityId);
+  if (communityIds.length === 0) return [];
   const chunks: string[][] = [];
   for (let i = 0; i < communityIds.length; i += 30) {
     chunks.push(communityIds.slice(i, i + 30));
@@ -284,6 +297,10 @@ export async function getPendingReportsForCommunity(
       const reportedDoc = await db.collection('users').doc(reportedId).get();
       userCache.set(reportedId, reportedDoc.data()?.display_name ?? null);
     }
+    const [reporterTrustProfile, reportedTrustProfile] = await Promise.all([
+      getUserTrustProfile(reporterId, db),
+      getUserTrustProfile(reportedId, db),
+    ]);
 
     queue.push({
       id: doc.id,
@@ -304,6 +321,8 @@ export async function getPendingReportsForCommunity(
       context: typeof data.context === 'string' ? data.context : null,
       created_at: data.created_at as string,
       status: (data.status as ReportsRow['status']) ?? 'pending',
+      reporter_trust_profile: reporterTrustProfile,
+      reported_trust_profile: reportedTrustProfile,
     });
   }
 

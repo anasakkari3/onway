@@ -7,10 +7,14 @@ import type {
   CommunityType,
 } from '@/lib/types';
 import { AppError, NotFoundError, UnauthorizedError } from '@/lib/utils/errors';
+import {
+  ALLOWED_COMMUNITY_IDS,
+  isAllowedCommunityId,
+  listAllowedCommunities,
+} from '@/lib/community/allowed';
 
 export const DEFAULT_COMMUNITY_TYPE: CommunityType = 'verified';
 export const DEFAULT_COMMUNITY_MEMBERSHIP_MODE: CommunityMembershipMode = 'open';
-export const SYSTEM_PUBLIC_COMMUNITY_ID = 'general-public';
 
 export function normalizeInviteCode(inviteCode: string | null | undefined): string | null {
   if (typeof inviteCode !== 'string') return null;
@@ -19,29 +23,21 @@ export function normalizeInviteCode(inviteCode: string | null | undefined): stri
   return normalized.length > 0 ? normalized : null;
 }
 
-function isSystemCommunityRecord(id: string, data?: FirebaseFirestore.DocumentData) {
-  return id === SYSTEM_PUBLIC_COMMUNITY_ID || data?.is_system === true;
-}
-
 function normalizeCommunityInfo(
   id: string,
   data: FirebaseFirestore.DocumentData
 ): CommunityInfo {
-  const isSystem = isSystemCommunityRecord(id, data);
-
   return {
     id,
     name: (data.name as string) ?? 'Community',
     description: typeof data.description === 'string' ? data.description : null,
-    type: isSystem ? 'public' : data.type === 'public' ? 'public' : DEFAULT_COMMUNITY_TYPE,
-    membership_mode: isSystem
-      ? 'open'
-      : data.membership_mode === 'approval_required'
-        ? 'approval_required'
-        : DEFAULT_COMMUNITY_MEMBERSHIP_MODE,
-    listed: isSystem ? true : typeof data.listed === 'boolean' ? data.listed : false,
-    is_system: isSystem,
-    invite_code: isSystem ? null : normalizeInviteCode(data.invite_code),
+    type: data.type === 'public' ? 'public' : DEFAULT_COMMUNITY_TYPE,
+    membership_mode: data.membership_mode === 'approval_required'
+      ? 'approval_required'
+      : DEFAULT_COMMUNITY_MEMBERSHIP_MODE,
+    listed: typeof data.listed === 'boolean' ? data.listed : false,
+    is_system: data.is_system === true,
+    invite_code: normalizeInviteCode(data.invite_code),
   };
 }
 
@@ -49,6 +45,8 @@ export async function getCommunityById(
   communityId: string,
   passedDb?: FirebaseFirestore.Firestore
 ): Promise<CommunityInfo | null> {
+  if (!isAllowedCommunityId(communityId)) return null;
+
   const db = passedDb ?? getAdminFirestore();
   const doc = await db.collection('communities').doc(communityId).get();
   if (!doc.exists) return null;
@@ -78,7 +76,11 @@ export async function getCommunityByInviteCode(inviteCode: string): Promise<Comm
 
   const matches = snap.docs
     .map((doc) => normalizeCommunityInfo(doc.id, doc.data()))
-    .filter((community) => community.invite_code === normalizedInviteCode);
+    .filter(
+      (community) =>
+        isAllowedCommunityId(community.id) &&
+        community.invite_code === normalizedInviteCode
+    );
 
   if (matches.length === 0) return null;
   if (matches.length > 1) {
@@ -126,25 +128,26 @@ export async function joinCommunity(
 
 export async function listCommunities(options?: { listedOnly?: boolean }): Promise<CommunityInfo[]> {
   const db = getAdminFirestore();
-  let query: FirebaseFirestore.Query<FirebaseFirestore.DocumentData> = db.collection('communities');
+  const allowedIds = [...ALLOWED_COMMUNITY_IDS];
+  const communities = new Map<string, CommunityInfo>();
 
-  if (options?.listedOnly) {
-    query = query.where('listed', '==', true);
+  for (let i = 0; i < allowedIds.length; i += 30) {
+    const chunk = allowedIds.slice(i, i + 30);
+    const snap = await db.collection('communities').where('__name__', 'in', chunk).get();
+    snap.docs.forEach((doc) => {
+      const community = normalizeCommunityInfo(doc.id, doc.data());
+      if (!options?.listedOnly || community.listed) {
+        communities.set(doc.id, community);
+      }
+    });
   }
 
-  const snap = await query.get();
-  const communities = new Map(
-    snap.docs.map((doc) => [doc.id, normalizeCommunityInfo(doc.id, doc.data())])
-  );
-
-  if (options?.listedOnly && !communities.has(SYSTEM_PUBLIC_COMMUNITY_ID)) {
-    const systemDoc = await db.collection('communities').doc(SYSTEM_PUBLIC_COMMUNITY_ID).get();
-    if (systemDoc.exists) {
-      communities.set(
-        systemDoc.id,
-        normalizeCommunityInfo(systemDoc.id, systemDoc.data()!)
-      );
-    }
+  if (!options?.listedOnly) {
+    listAllowedCommunities().forEach((community) => {
+      if (!communities.has(community.id)) {
+        communities.set(community.id, community);
+      }
+    });
   }
 
   return [...communities.values()].sort((a, b) => a.name.localeCompare(b.name));
@@ -162,7 +165,9 @@ export async function getMyCommunities() {
 
   if (snap.empty) return [];
 
-  const communityIds = snap.docs.map((d) => d.data().community_id as string);
+  const communityIds = snap.docs
+    .map((d) => d.data().community_id as string)
+    .filter(isAllowedCommunityId);
   const results: { community_id: string; role: string; community: CommunityInfo }[] = [];
 
   // Fetch community details (Firestore 'in' queries support max 30)

@@ -315,6 +315,9 @@ export default async function AdminCommunitiesPage(props: {
                             {copy.reportedUser}: {report.reported_display_name ?? report.reported_id}
                           </p>
                           <p className="text-xs text-slate-500 dark:text-slate-400">
+                            Trust: reporter {report.reporter_trust_profile?.trust_score ?? 0} | reported {report.reported_trust_profile?.trust_score ?? 0}
+                          </p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">
                             {copy.submittedAt} {formatLocalizedDateTime(lang, report.created_at)}
                           </p>
                           <p className="text-xs text-slate-500 dark:text-slate-400">

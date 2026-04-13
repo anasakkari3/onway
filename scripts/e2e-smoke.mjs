@@ -94,6 +94,21 @@ function getAdminAuth() {
   return getAuth(getAdminApp());
 }
 
+function assertDisposableWriteTarget() {
+  loadLocalEnvFiles();
+
+  const usesEmulator = Boolean(
+    process.env.FIRESTORE_EMULATOR_HOST || process.env.FIREBASE_AUTH_EMULATOR_HOST
+  );
+  if (usesEmulator || process.env.SMOKE_ALLOW_REMOTE_FIRESTORE_WRITES === '1') {
+    return;
+  }
+
+  throw new Error(
+    'The legacy smoke test creates disposable users, trips, and smoke-* communities. Use Firebase emulators or set SMOKE_ALLOW_REMOTE_FIRESTORE_WRITES=1 intentionally.'
+  );
+}
+
 function formatRunId() {
   const iso = new Date().toISOString().replace(/[-:.TZ]/g, '');
   return `smoke${iso.slice(0, 14)}`;
@@ -104,10 +119,6 @@ function formatDatetimeLocal(date) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(
     date.getHours()
   )}:${pad(date.getMinutes())}`;
-}
-
-function createPassword() {
-  return 'SmokePass!123';
 }
 
 async function ensureAppReachable(appUrl) {
@@ -121,16 +132,16 @@ async function ensureAppReachable(appUrl) {
 
 async function createSessionCookieForUser(user) {
   const { apiKey } = getClientEnv();
+  const customToken = await getAdminAuth().createCustomToken(user.uid);
   const response = await fetch(
-    `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${apiKey}`,
+    `https://identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key=${apiKey}`,
     {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
       },
       body: JSON.stringify({
-        email: user.email,
-        password: user.password,
+        token: customToken,
         returnSecureToken: true,
       }),
     }
@@ -169,10 +180,9 @@ async function attachSessionCookie(context, appUrl, sessionCookie) {
 }
 
 async function createSmokeUser(auth, db, input) {
-  const password = createPassword();
   const userRecord = await auth.createUser({
     email: input.email,
-    password,
+    emailVerified: true,
     displayName: input.displayName,
   });
 
@@ -185,10 +195,7 @@ async function createSmokeUser(auth, db, input) {
     age: input.age ?? 22,
     gender: input.gender ?? 'prefer_not_to_say',
     is_driver: input.isDriver ?? false,
-    has_driver_license: input.hasDriverLicense ?? false,
     gender_preference: input.genderPreference ?? 'same_as_me',
-    driver_license_status: 'provided_placeholder',
-    student_id_status: 'provided_placeholder',
     avatar_status: 'not_provided',
     phone_verified: false,
     profile_completed_at: now,
@@ -201,7 +208,6 @@ async function createSmokeUser(auth, db, input) {
   return {
     uid: userRecord.uid,
     email: input.email,
-    password,
     displayName: input.displayName,
   };
 }
@@ -325,6 +331,8 @@ async function waitForMessage(db, tripId, userId, content, timeoutMs = 15000) {
 }
 
 async function main() {
+  assertDisposableWriteTarget();
+
   const appUrl = (process.env.SMOKE_BASE_URL ?? 'http://127.0.0.1:3000').replace(/\/$/, '');
   const runId = formatRunId();
   const db = getDb();
@@ -347,7 +355,6 @@ async function main() {
     displayName: `Smoke Driver ${runId}`,
     gender: 'man',
     isDriver: true,
-    hasDriverLicense: true,
   });
   const rider = await createSmokeUser(auth, db, {
     email: riderEmail,

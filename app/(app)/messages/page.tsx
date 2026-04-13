@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import CommunityBadge from '@/components/CommunityBadge';
 import EmptyStateCard from '@/components/EmptyStateCard';
+import GuideHint from '@/components/GuideHint';
 import { getCurrentUser } from '@/lib/auth/session';
 import { getServerI18n } from '@/lib/i18n/server';
 import { formatLocalizedDate, formatLocalizedTime } from '@/lib/i18n/locale';
@@ -21,6 +22,7 @@ const COPY = {
     youLabel: 'You',
     pageIntro:
       'Each ride keeps its own conversation so pickup updates, cancellations, and chat stay in one place.',
+    guide: 'Open a thread to coordinate pickup details. Use trip updates for important changes, and keep messages focused on the ride.',
     threadCount: (count: number) => `${count} active ${count === 1 ? 'thread' : 'threads'}`,
     restrictedCount: (count: number) =>
       `${count} updates-only ${count === 1 ? 'thread' : 'threads'}`,
@@ -38,6 +40,7 @@ const COPY = {
     youLabel: 'أنت',
     pageIntro:
       'كل رحلة تحتفظ بمحادثتها الخاصة ليبقى تنسيق الالتقاء والإلغاء والدردشة في مكان واحد.',
+    guide: 'افتح محادثة الرحلة لتنسيق مكان ووقت الالتقاء. استخدم التحديثات المهمة للتغييرات، وخلي الرسائل مركزة على الرحلة.',
     threadCount: (count: number) =>
       `${count} ${count === 1 ? 'محادثة نشطة' : 'محادثات نشطة'}`,
     restrictedCount: (count: number) =>
@@ -56,6 +59,7 @@ const COPY = {
     youLabel: 'אתם',
     pageIntro:
       'לכל נסיעה יש שרשור נפרד כדי שעדכוני איסוף, ביטולים וצ׳אט יישארו במקום אחד.',
+    guide: 'פתחו שרשור כדי לתאם איסוף. השתמשו בעדכוני נסיעה לשינויים חשובים ושמרו את ההודעות ממוקדות בנסיעה.',
     threadCount: (count: number) =>
       `${count} ${count === 1 ? 'שרשור פעיל' : 'שרשורים פעילים'}`,
     restrictedCount: (count: number) =>
@@ -155,6 +159,8 @@ export default async function MessagesPage() {
           )}
         </div>
       </section>
+
+      <GuideHint text={copy.guide} variant="info" dismissible />
 
       <div className="space-y-3">
         {threads.map((thread) => {

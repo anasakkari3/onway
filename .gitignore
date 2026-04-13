@@ -3,6 +3,13 @@
 .env.local
 .next/
 node_modules/
+tsconfig.tsbuildinfo
+
+# Local Firebase CLI cache and debug logs — not part of the app
+.firebase/
+
+# Claude Code local settings — not part of the app
+.claude/
 
 # PWA generated files (produced by @ducanh2912/next-pwa at build time, dest: "public")
 public/sw.js
