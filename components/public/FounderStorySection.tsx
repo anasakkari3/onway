@@ -75,40 +75,39 @@ export default function FounderStorySection() {
   const copy = brandCopy(COPY[lang]);
 
   return (
-    <section className="py-20 px-4 bg-white dark:bg-slate-950">
-      <div className="max-w-6xl mx-auto">
-        <div className="rounded-[32px] border border-slate-200 dark:border-slate-800 bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-950 shadow-sm overflow-hidden">
-          <div className="grid gap-0 lg:grid-cols-[1.35fr_0.95fr]">
-            <div className="p-8 sm:p-10 lg:p-12">
-              <p className="text-xs font-bold uppercase tracking-[0.24em] text-sky-600 dark:text-sky-400 mb-4">
+    <section className="landing-section bg-[var(--surface)] px-4">
+      <div className="mx-auto max-w-7xl">
+        <div className="grid gap-10 lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
+            <div>
+              <p className="landing-eyebrow mb-4">
                 {copy.eyebrow}
               </p>
-              <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight max-w-2xl">
+              <h2 className="display-title max-w-3xl text-3xl font-black text-[var(--foreground)] sm:text-5xl">
                 {copy.title}
               </h2>
               <div className="mt-6 space-y-4 max-w-3xl">
                 {copy.story.map((paragraph) => (
-                  <p key={paragraph} className="text-base sm:text-lg text-slate-600 dark:text-slate-300 leading-relaxed">
+                  <p key={paragraph} className="text-base leading-relaxed text-[var(--muted-strong)] sm:text-lg">
                     {paragraph}
                   </p>
                 ))}
               </div>
-              <p className="mt-4 text-sm sm:text-base text-sky-700 dark:text-sky-300 font-medium max-w-3xl">
+              <p className="mt-4 max-w-3xl text-sm font-bold text-[var(--primary)] sm:text-base">
                 {copy.nameNote}
               </p>
 
-              <div className="mt-8 rounded-2xl border border-sky-100 dark:border-sky-900/60 bg-sky-50/70 dark:bg-sky-950/30 p-5">
-                <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-sky-600 dark:text-sky-400 mb-2">
+              <div className="soft-panel mt-8 rounded-lg p-5">
+                <p className="mb-2 text-xs font-black text-[var(--primary)]">
                   {copy.whyTitle}
                 </p>
-                <p className="text-sm sm:text-base text-slate-700 dark:text-slate-200 leading-relaxed">
+                <p className="text-sm leading-relaxed text-[var(--muted-strong)] sm:text-base">
                   {copy.whyQuote}
                 </p>
               </div>
             </div>
 
-            <div className="border-t lg:border-t-0 lg:border-l border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/70 p-8 sm:p-10 lg:p-12 flex flex-col justify-center">
-              <div className="overflow-hidden rounded-[28px] border border-slate-200 dark:border-slate-800 shadow-sm bg-slate-200 dark:bg-slate-800">
+            <div className="surface-card flex flex-col justify-center rounded-lg p-5 sm:p-6">
+              <div className="overflow-hidden rounded-lg border border-[var(--border-soft)] bg-[var(--surface-muted)] shadow-sm">
                 <Image
                   src="/brand/founder-anas.jpeg"
                   alt="Anas Akkari"
@@ -119,11 +118,11 @@ export default function FounderStorySection() {
                 />
               </div>
 
-              <p className="mt-5 text-xl font-bold text-slate-900 dark:text-white">Anas Akkari</p>
-              <p className="mt-1 text-sm font-medium text-slate-500 dark:text-slate-400">
+              <p className="mt-5 text-xl font-black text-[var(--foreground)]">Anas Akkari</p>
+              <p className="mt-1 text-sm font-bold text-[var(--muted)]">
                 {copy.role}
               </p>
-              <p className="mt-5 text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed">
+              <p className="mt-5 text-sm leading-relaxed text-[var(--muted-strong)] sm:text-base">
                 {copy.focus}
               </p>
 
@@ -131,7 +130,7 @@ export default function FounderStorySection() {
                 {copy.tags.map((tag) => (
                   <span
                     key={tag}
-                    className="rounded-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 px-3 py-1 text-xs font-semibold text-slate-600 dark:text-slate-300"
+                    className="rounded-lg border border-[var(--border-soft)] bg-[var(--surface-raised)] px-3 py-1 text-xs font-bold text-[var(--muted-strong)]"
                   >
                     {tag}
                   </span>
@@ -142,18 +141,17 @@ export default function FounderStorySection() {
                 href="https://www.linkedin.com/in/anas-akkari-ba684b369"
                 target="_blank"
                 rel="noreferrer"
-                className="mt-8 inline-flex w-fit items-center gap-2 rounded-2xl bg-sky-600 dark:bg-sky-500 px-5 py-3 text-sm font-bold text-white hover:bg-sky-700 dark:hover:bg-sky-600 transition-colors btn-press shadow-sm"
+                className="btn-press mt-8 inline-flex w-fit items-center gap-2 rounded-lg bg-[var(--route-ink)] px-5 py-3 text-sm font-black text-white shadow-sm transition-colors hover:bg-[var(--primary-dark)]"
               >
                 {copy.cta}
                 <span aria-hidden="true">↗</span>
               </a>
 
-              <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
+              <p className="mt-3 text-xs text-[var(--muted)]">
                 {copy.footnote}
               </p>
             </div>
           </div>
-        </div>
       </div>
     </section>
   );

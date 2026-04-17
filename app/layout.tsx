@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Noto_Kufi_Arabic, Noto_Sans_Arabic, Noto_Sans_Hebrew } from "next/font/google";
 import { cookies } from 'next/headers';
 import { getBrandMetaDescription, getBrandMetaTitle } from '@/lib/brand/config';
 import { LanguageProvider } from '@/lib/i18n/LanguageProvider';
@@ -16,6 +16,24 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+});
+
+const arabicSans = Noto_Sans_Arabic({
+  variable: "--font-arabic-sans",
+  subsets: ["arabic", "latin"],
+  weight: "variable",
+});
+
+const arabicDisplay = Noto_Kufi_Arabic({
+  variable: "--font-arabic-display",
+  subsets: ["arabic", "latin"],
+  weight: "variable",
+});
+
+const hebrewSans = Noto_Sans_Hebrew({
+  variable: "--font-hebrew-sans",
+  subsets: ["hebrew", "latin"],
+  weight: "variable",
 });
 
 export const metadata: Metadata = {
@@ -37,7 +55,7 @@ export default async function RootLayout({
   return (
     <html lang={lang} dir={dir} suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground transition-colors duration-200`}
+        className={`${geistSans.variable} ${geistMono.variable} ${arabicSans.variable} ${arabicDisplay.variable} ${hebrewSans.variable} antialiased bg-background text-foreground transition-colors duration-200`}
       >
         <ThemeProvider>
           <LanguageProvider lang={lang}>

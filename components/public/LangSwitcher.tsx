@@ -26,7 +26,7 @@ export default function LangSwitcher({ current }: Props) {
   };
 
   return (
-    <div className="flex items-center gap-0.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-900/60 backdrop-blur-sm p-0.5">
+    <div className="flex min-h-11 items-center gap-0.5 rounded-lg border border-[var(--border-soft)] bg-[var(--surface)]/75 p-1 backdrop-blur-sm">
       {LANGS.map((l) => (
         <button
           key={l.value}
@@ -34,10 +34,10 @@ export default function LangSwitcher({ current }: Props) {
           disabled={isPending}
           onClick={() => handleChange(l.value)}
           title={l.label}
-          className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition-all ${
+          className={`min-h-11 min-w-11 rounded-lg px-3 text-xs font-bold transition-all ${
             l.value === current
-              ? 'bg-sky-500 text-white shadow-sm'
-              : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
+              ? 'bg-[var(--primary)] text-white shadow-sm dark:text-[var(--route-ink)]'
+              : 'text-[var(--muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--muted-strong)]'
           }`}
         >
           {l.short}

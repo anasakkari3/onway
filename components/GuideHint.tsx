@@ -14,10 +14,10 @@ import { useState } from 'react';
 type Variant = 'tip' | 'info' | 'success' | 'warning';
 
 const VARIANT_CLASSES: Record<Variant, string> = {
-  tip:     'bg-sky-50 dark:bg-sky-950/30 border-sky-200 dark:border-sky-800 text-sky-800 dark:text-sky-300',
-  info:    'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300',
-  success: 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300',
-  warning: 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300',
+  tip:     'bg-[var(--primary-light)] border-[var(--border-soft)] text-[var(--primary-dark)] dark:text-[var(--primary-dark)]',
+  info:    'bg-[var(--surface-raised)] border-[var(--border-soft)] text-[var(--muted-strong)]',
+  success: 'bg-[var(--primary-light)] border-[var(--border-soft)] text-[var(--success)]',
+  warning: 'bg-[var(--surface-raised)] border-[var(--border-soft)] text-[var(--accent-strong)]',
 };
 
 type Props = {
@@ -30,7 +30,7 @@ type Props = {
 
 export default function GuideHint({
   text,
-  icon = '💡',
+  icon = 'i',
   variant = 'tip',
   dismissible = false,
   className = '',
@@ -41,18 +41,18 @@ export default function GuideHint({
 
   return (
     <div
-      className={`flex items-start gap-2.5 rounded-2xl border px-4 py-3 text-sm leading-relaxed ${VARIANT_CLASSES[variant]} ${className}`}
+      className={`flex items-start gap-2.5 rounded-lg border px-4 py-3 text-sm font-semibold leading-relaxed shadow-sm ${VARIANT_CLASSES[variant]} ${className}`}
     >
-      <span className="shrink-0 text-base leading-5" aria-hidden="true">{icon}</span>
+      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-lg bg-white/50 text-xs font-black leading-5 dark:bg-black/10" aria-hidden="true">{icon}</span>
       <span className="flex-1">{text}</span>
       {dismissible && (
         <button
           type="button"
           onClick={() => setDismissed(true)}
           aria-label="إغلاق"
-          className="shrink-0 text-current opacity-50 hover:opacity-100 transition-opacity text-xs font-bold"
+          className="shrink-0 text-xs font-bold text-current opacity-50 transition-opacity hover:opacity-100"
         >
-          ✕
+          x
         </button>
       )}
     </div>

@@ -8,14 +8,17 @@ import {
   browserLocalPersistence,
   browserSessionPersistence,
   createUserWithEmailAndPassword,
+  GoogleAuthProvider,
   onAuthStateChanged,
   sendEmailVerification,
   sendPasswordResetEmail,
   setPersistence,
   signInWithEmailAndPassword,
+  signInWithPopup,
   type User,
 } from 'firebase/auth';
 import BrandLogo from '@/components/BrandLogo';
+import HeroRouteScene from '@/components/public/HeroRouteScene';
 import { BRAND_NAME, brandCopy } from '@/lib/brand/config';
 import { getFirebaseAuth } from '@/lib/firebase/config';
 import { useTranslation } from '@/lib/i18n/LanguageProvider';
@@ -50,6 +53,15 @@ type ScreenCopy = {
   verifiedContinue: string;
   resendVerification: string;
   verifiedReturning: string;
+  decisionTitle: string;
+  decisionBody: string;
+  googleButton: string;
+  googleCancelled: string;
+  emailDivider: string;
+  trustBadge: string;
+  timeBadge: string;
+  continueBrowsing: string;
+  reassurance: string[];
   passwordHelp: string;
   passwordRules: string[];
   passwordsDontMatch: string;
@@ -76,7 +88,7 @@ const COPY: Record<SupportedLang, ScreenCopy> = {
     confirmPassword: 'Confirm password',
     remember: 'Remember this device',
     loginButton: 'Log in',
-    signupButton: 'Create account',
+    signupButton: 'Join now',
     resetButton: 'Send reset email',
     working: 'Please wait...',
     resetComplete: 'Password updated. Log in with your new password.',
@@ -92,6 +104,15 @@ const COPY: Record<SupportedLang, ScreenCopy> = {
     verifiedContinue: 'I verified my email',
     resendVerification: 'Resend verification email',
     verifiedReturning: 'Email verified. Redirecting...',
+    decisionTitle: 'You are one step away from joining your campus rides',
+    decisionBody: 'Book seats, message drivers, and keep your routes inside a verified student community.',
+    googleButton: 'Continue with Google',
+    googleCancelled: 'No problem. You can keep browsing and join when you are ready.',
+    emailDivider: 'or use email',
+    trustBadge: 'Students only / verified community',
+    timeBadge: 'Takes less than 10 seconds',
+    continueBrowsing: 'Continue browsing',
+    reassurance: ['No spam', 'No commitments', 'You can leave anytime'],
     passwordHelp: 'Use a strong password:',
     passwordRules: [
       'At least 8 characters',
@@ -134,7 +155,7 @@ const COPY: Record<SupportedLang, ScreenCopy> = {
     confirmPassword: 'تأكيد كلمة المرور',
     remember: 'تذكر هذا الجهاز',
     loginButton: 'دخول',
-    signupButton: 'إنشاء الحساب',
+    signupButton: 'انضم الآن',
     resetButton: 'إرسال رابط إعادة التعيين',
     working: 'ثواني...',
     resetComplete: 'تم تحديث كلمة المرور. سجّل الدخول بكلمتك الجديدة.',
@@ -150,6 +171,15 @@ const COPY: Record<SupportedLang, ScreenCopy> = {
     verifiedContinue: 'تحققت من بريدي',
     resendVerification: 'إرسال رسالة تحقق جديدة',
     verifiedReturning: 'تم التحقق. جاري التحويل...',
+    decisionTitle: 'أنت على بعد خطوة من رحلات مجتمعك الجامعي',
+    decisionBody: 'احجز مقعدك، راسل السائق، وابقَ داخل مجتمع طلابي موثوق.',
+    googleButton: 'المتابعة باستخدام Google',
+    googleCancelled: 'لا مشكلة. يمكنك متابعة التصفح والانضمام عندما تكون جاهزاً.',
+    emailDivider: 'أو استخدم البريد',
+    trustBadge: 'طلاب فقط / مجتمع موثوق',
+    timeBadge: 'أقل من 10 ثوان',
+    continueBrowsing: 'متابعة التصفح',
+    reassurance: ['لا رسائل مزعجة', 'لا التزام', 'يمكنك المغادرة في أي وقت'],
     passwordHelp: 'استخدم كلمة مرور قوية:',
     passwordRules: [
       '8 أحرف على الأقل',
@@ -192,7 +222,7 @@ const COPY: Record<SupportedLang, ScreenCopy> = {
     confirmPassword: 'אימות סיסמה',
     remember: 'זכור את המכשיר הזה',
     loginButton: 'כניסה',
-    signupButton: 'יצירת חשבון',
+    signupButton: 'להצטרף עכשיו',
     resetButton: 'שליחת איפוס סיסמה',
     working: 'רגע...',
     resetComplete: 'הסיסמה עודכנה. התחברו עם הסיסמה החדשה.',
@@ -208,6 +238,15 @@ const COPY: Record<SupportedLang, ScreenCopy> = {
     verifiedContinue: 'אימתתי את האימייל',
     resendVerification: 'שליחת אימות מחדש',
     verifiedReturning: 'האימייל אומת. מעבירים...',
+    decisionTitle: 'אתם במרחק צעד אחד מנסיעות הקמפוס שלכם',
+    decisionBody: 'הזמינו מקום, שלחו הודעה לנהג ושמרו מסלולים בתוך קהילה סטודנטיאלית מאומתת.',
+    googleButton: 'להמשיך עם Google',
+    googleCancelled: 'אין בעיה. אפשר להמשיך לעיין ולהצטרף כשתהיו מוכנים.',
+    emailDivider: 'או להשתמש באימייל',
+    trustBadge: 'סטודנטים בלבד / קהילה מאומתת',
+    timeBadge: 'פחות מ-10 שניות',
+    continueBrowsing: 'להמשיך לעיין',
+    reassurance: ['בלי ספאם', 'בלי התחייבות', 'אפשר לעזוב בכל זמן'],
     passwordHelp: 'השתמשו בסיסמה חזקה:',
     passwordRules: [
       'לפחות 8 תווים',
@@ -285,8 +324,9 @@ function LoginContent() {
   const { lang } = useTranslation();
   const copy = useMemo(() => getCopy(lang), [lang]);
   const nextPath = searchParams.get('next');
+  const requestedMode = searchParams.get('mode') === 'signup' ? 'signup' : 'login';
 
-  const [mode, setMode] = useState<AuthMode>('login');
+  const [mode, setMode] = useState<AuthMode>(requestedMode);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -359,6 +399,10 @@ function LoginContent() {
   };
 
   useEffect(() => {
+    setMode(requestedMode);
+  }, [requestedMode]);
+
+  useEffect(() => {
     if (searchParams.get('reset') === '1') {
       setNotice(copy.resetComplete);
       setMode('login');
@@ -392,6 +436,28 @@ function LoginContent() {
       await finishAuth(credential.user);
     } catch (authError) {
       setError(getFirebaseAuthError(authError, copy));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleAuth = async () => {
+    resetMessages();
+    setLoading(true);
+
+    try {
+      const auth = getFirebaseAuth();
+      await setPersistence(auth, remember ? browserLocalPersistence : browserSessionPersistence);
+      const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: 'select_account' });
+      const credential = await signInWithPopup(auth, provider);
+      await finishAuth(credential.user);
+    } catch (authError) {
+      if (authError instanceof FirebaseError && authError.code === 'auth/popup-closed-by-user') {
+        setNotice(copy.googleCancelled);
+      } else {
+        setError(getFirebaseAuthError(authError, copy));
+      }
     } finally {
       setLoading(false);
     }
@@ -496,30 +562,55 @@ function LoginContent() {
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gradient-to-b from-sky-50 via-white to-slate-100 px-4 py-8 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
-      <div className="w-full max-w-md">
-        <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-          <div className="text-center">
-            <div className="mb-5 flex justify-center">
-              <BrandLogo lang={lang as SupportedLang} size="auth" priority className="drop-shadow-sm" />
+    <main className="auth-shell">
+      <HeroRouteScene />
+      <div className="auth-shell__scrim" aria-hidden="true" />
+      <div className="auth-shell__content">
+        <section className="auth-panel">
+          <div className="auth-panel__intro">
+            <div className="mb-2 flex justify-center">
+              <BrandLogo lang={lang as SupportedLang} size="nav" priority className="drop-shadow-sm" />
             </div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-              {copy.title}
+            <div className="auth-panel__badges">
+              <span>{copy.trustBadge}</span>
+              <span>{copy.timeBadge}</span>
+            </div>
+            <h1 className="display-title">
+              {copy.decisionTitle}
             </h1>
-            <p className="mt-2 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
-              {copy.subtitle}
+            <p>
+              {copy.decisionBody}
             </p>
+            <div className="auth-panel__reassurance" aria-label="Signup reassurance">
+              {copy.reassurance.map((item) => (
+                <span key={item}>{item}</span>
+              ))}
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleGoogleAuth}
+            disabled={loading}
+            className="auth-google"
+          >
+            <span aria-hidden="true">G</span>
+            {copy.googleButton}
+          </button>
+
+          <div className="auth-divider">
+            <span>{copy.emailDivider}</span>
           </div>
 
           {mode !== 'verify' && (
-            <div className="mt-6 grid grid-cols-2 gap-2 rounded-lg bg-slate-100 p-1 dark:bg-slate-800">
+            <div className="auth-mode-tabs mt-4 grid grid-cols-2 gap-2 rounded-lg bg-[var(--surface-muted)] p-1">
               <button
                 type="button"
                 onClick={() => switchMode('login')}
-                className={`rounded-md px-3 py-2 text-sm font-semibold transition-colors ${
+                className={`min-h-11 rounded-lg px-3 text-sm font-bold transition-colors ${
                   mode === 'login'
-                    ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-950 dark:text-white'
-                    : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+                    ? 'bg-[var(--surface)] text-[var(--foreground)] shadow-sm'
+                    : 'text-[var(--muted)] hover:text-[var(--muted-strong)]'
                 }`}
               >
                 {copy.login}
@@ -527,10 +618,10 @@ function LoginContent() {
               <button
                 type="button"
                 onClick={() => switchMode('signup')}
-                className={`rounded-md px-3 py-2 text-sm font-semibold transition-colors ${
+                className={`min-h-11 rounded-lg px-3 text-sm font-bold transition-colors ${
                   mode === 'signup'
-                    ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-950 dark:text-white'
-                    : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+                    ? 'bg-[var(--surface)] text-[var(--foreground)] shadow-sm'
+                    : 'text-[var(--muted)] hover:text-[var(--muted-strong)]'
                 }`}
               >
                 {copy.signup}
@@ -539,13 +630,13 @@ function LoginContent() {
           )}
 
           {notice && (
-            <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300">
+            <div className="auth-message auth-message--success">
               {notice}
             </div>
           )}
 
           {error && (
-            <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300">
+            <div className="auth-message auth-message--error">
               {error}
             </div>
           )}
@@ -562,19 +653,19 @@ function LoginContent() {
                 passwordAutoComplete="current-password"
               />
               <div className="flex items-center justify-between gap-3">
-                <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                <label className="flex min-h-11 items-center gap-2 text-sm font-semibold text-[var(--muted-strong)]">
                   <input
                     type="checkbox"
                     checked={remember}
                     onChange={(event) => setRemember(event.target.checked)}
-                    className="rounded border-slate-300 text-sky-600 focus:ring-sky-500"
+                    className="rounded border-[var(--border-soft)] text-[var(--primary)] focus:ring-[var(--primary)]"
                   />
                   {copy.remember}
                 </label>
                 <button
                   type="button"
                   onClick={() => switchMode('reset')}
-                  className="text-sm font-semibold text-sky-600 hover:text-sky-700 dark:text-sky-400"
+                  className="min-h-11 text-sm font-bold text-[var(--primary)] hover:underline"
                 >
                   {copy.forgot}
                 </button>
@@ -584,7 +675,7 @@ function LoginContent() {
           )}
 
           {mode === 'signup' && (
-            <form onSubmit={handleSignup} className="mt-6 space-y-4" noValidate>
+            <form onSubmit={handleSignup} className="mt-4 space-y-3" noValidate>
               <AuthFields
                 copy={copy}
                 email={email}
@@ -595,7 +686,7 @@ function LoginContent() {
                 passwordAutoComplete="new-password"
               />
               <div>
-                <label htmlFor="confirmPassword" className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                <label htmlFor="confirmPassword" className="mb-1.5 block text-sm font-bold text-[var(--muted-strong)]">
                   {copy.confirmPassword}
                 </label>
                 <input
@@ -607,28 +698,30 @@ function LoginContent() {
                     setConfirmPassword(event.target.value);
                     resetMessages();
                   }}
-                  className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition-all focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                  className="min-h-11 w-full rounded-lg border border-[var(--border-soft)] bg-[var(--surface)] px-4 py-3 text-[var(--foreground)] outline-none transition-all focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20"
                 />
               </div>
-              <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950/60">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                  {copy.passwordHelp}
-                </p>
-                <ul className="mt-2 space-y-1">
-                  {copy.passwordRules.map((rule, index) => (
-                    <li
-                      key={rule}
-                      className={`text-sm ${
-                        passwordRuleStatus[index]
-                          ? 'text-emerald-600 dark:text-emerald-400'
-                          : 'text-slate-500 dark:text-slate-400'
-                      }`}
-                    >
-                      {passwordRuleStatus[index] ? 'OK' : '-'} {rule}
-                    </li>
-                  ))}
-                </ul>
-              </div>
+              {password ? (
+                <div className="auth-password-rules rounded-lg border border-[var(--border-soft)] bg-[var(--surface-raised)] px-4 py-3">
+                  <p className="text-xs font-black text-[var(--muted)]">
+                    {copy.passwordHelp}
+                  </p>
+                  <ul className="mt-2 space-y-1">
+                    {copy.passwordRules.map((rule, index) => (
+                      <li
+                        key={rule}
+                        className={`text-sm ${
+                          passwordRuleStatus[index]
+                            ? 'text-[var(--success)]'
+                            : 'text-[var(--muted)]'
+                        }`}
+                      >
+                        {passwordRuleStatus[index] ? 'OK' : '·'} {rule}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
               <SubmitButton
                 label={copy.signupButton}
                 loadingLabel={copy.working}
@@ -640,11 +733,11 @@ function LoginContent() {
 
           {mode === 'reset' && (
             <form onSubmit={handlePasswordReset} className="mt-6 space-y-4" noValidate>
-              <p className="text-sm leading-relaxed text-slate-500 dark:text-slate-400">
+              <p className="text-sm leading-relaxed text-[var(--muted-strong)]">
                 {copy.forgotPrompt}
               </p>
               <div>
-                <label htmlFor="resetEmail" className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                <label htmlFor="resetEmail" className="mb-1.5 block text-sm font-bold text-[var(--muted-strong)]">
                   {copy.email}
                 </label>
                 <input
@@ -657,14 +750,14 @@ function LoginContent() {
                     setEmail(event.target.value);
                     resetMessages();
                   }}
-                  className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition-all focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                  className="min-h-11 w-full rounded-lg border border-[var(--border-soft)] bg-[var(--surface)] px-4 py-3 text-[var(--foreground)] outline-none transition-all focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20"
                 />
               </div>
               <SubmitButton label={copy.resetButton} loadingLabel={copy.working} loading={loading} />
               <button
                 type="button"
                 onClick={() => switchMode('login')}
-                className="w-full text-center text-sm font-semibold text-slate-500 hover:text-sky-600 dark:text-slate-400 dark:hover:text-sky-400"
+                className="min-h-11 w-full text-center text-sm font-bold text-[var(--muted)] hover:text-[var(--primary)]"
               >
                 {copy.backToLogin}
               </button>
@@ -673,11 +766,11 @@ function LoginContent() {
 
           {mode === 'verify' && (
             <div className="mt-6 space-y-4 text-center">
-              <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-5 dark:border-amber-900/50 dark:bg-amber-950/30">
-                <p className="text-lg font-bold text-amber-900 dark:text-amber-200">
+              <div className="rounded-lg border border-[var(--border-soft)] bg-[var(--surface-raised)] px-4 py-5">
+                <p className="text-lg font-black text-[var(--foreground)]">
                   {copy.verificationTitle}
                 </p>
-                <p className="mt-2 text-sm leading-relaxed text-amber-800 dark:text-amber-300">
+                <p className="mt-2 text-sm leading-relaxed text-[var(--muted-strong)]">
                   {copy.verificationBody(pendingEmail || email)}
                 </p>
               </div>
@@ -691,38 +784,42 @@ function LoginContent() {
                 type="button"
                 onClick={handleResendVerification}
                 disabled={loading}
-                className="w-full rounded-lg border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                className="min-h-11 w-full rounded-lg border border-[var(--border-soft)] px-4 py-3 text-sm font-bold text-[var(--muted-strong)] hover:bg-[var(--surface-muted)] disabled:opacity-50"
               >
                 {copy.resendVerification}
               </button>
               <button
                 type="button"
                 onClick={() => switchMode('login')}
-                className="text-sm font-semibold text-slate-500 hover:text-sky-600 dark:text-slate-400 dark:hover:text-sky-400"
+                className="min-h-11 text-sm font-bold text-[var(--muted)] hover:text-[var(--primary)]"
               >
                 {copy.backToLogin}
               </button>
             </div>
           )}
 
-          <div className="mt-6 rounded-lg border border-slate-200 bg-slate-50 px-4 py-4 dark:border-slate-800 dark:bg-slate-950/60">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+          <div className="auth-trust-checklist mt-6 rounded-lg border border-[var(--border-soft)] bg-[var(--surface-raised)] px-4 py-4">
+            <p className="text-xs font-black text-[var(--primary)]">
               {copy.trustTitle}
             </p>
             <ul className="mt-2 space-y-1.5">
               {copy.trustBullets.map((bullet) => (
-                <li key={bullet} className="text-sm text-slate-600 dark:text-slate-300">
+                <li key={bullet} className="text-sm text-[var(--muted-strong)]">
                   - {bullet}
                 </li>
               ))}
             </ul>
           </div>
 
-          <p className="mt-5 text-center text-xs text-slate-400 dark:text-slate-500">
+          <Link href="/preview" className="auth-continue">
+            {copy.continueBrowsing}
+          </Link>
+
+          <p className="mt-4 flex flex-wrap items-center justify-center gap-x-1 text-center text-xs text-[var(--muted)]">
             {copy.privacyNote}
-            <Link href="/terms" className="underline hover:text-slate-600 dark:hover:text-slate-300">{copy.terms}</Link>
+            <Link href="/terms" className="inline-flex min-h-11 min-w-11 items-center justify-center underline hover:text-[var(--muted-strong)]">{copy.terms}</Link>
             {' & '}
-            <Link href="/privacy" className="underline hover:text-slate-600 dark:hover:text-slate-300">{copy.privacy}</Link>
+            <Link href="/privacy" className="inline-flex min-h-11 min-w-11 items-center justify-center underline hover:text-[var(--muted-strong)]">{copy.privacy}</Link>
           </p>
         </section>
       </div>
@@ -744,7 +841,7 @@ function AuthFields(props: {
   return (
     <>
       <div>
-        <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
+        <label htmlFor="email" className="mb-1.5 block text-sm font-bold text-[var(--muted-strong)]">
           {copy.email}
         </label>
         <input
@@ -757,11 +854,11 @@ function AuthFields(props: {
             setEmail(event.target.value);
             resetMessages();
           }}
-          className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition-all focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+          className="min-h-11 w-full rounded-lg border border-[var(--border-soft)] bg-[var(--surface)] px-4 py-3 text-[var(--foreground)] outline-none transition-all focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20"
         />
       </div>
       <div>
-        <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
+        <label htmlFor="password" className="mb-1.5 block text-sm font-bold text-[var(--muted-strong)]">
           {copy.password}
         </label>
         <input
@@ -773,7 +870,7 @@ function AuthFields(props: {
             setPassword(event.target.value);
             resetMessages();
           }}
-          className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition-all focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+          className="min-h-11 w-full rounded-lg border border-[var(--border-soft)] bg-[var(--surface)] px-4 py-3 text-[var(--foreground)] outline-none transition-all focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20"
         />
       </div>
     </>
@@ -795,7 +892,7 @@ function SubmitButton(props: {
         type="button"
         onClick={onClick}
         disabled={loading || disabled}
-        className="w-full rounded-lg bg-sky-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-sky-700 disabled:opacity-50 dark:bg-sky-500 dark:hover:bg-sky-600"
+        className="min-h-11 w-full rounded-lg bg-[var(--accent)] px-4 py-3 text-sm font-black text-[var(--route-ink)] transition-colors hover:brightness-105 disabled:opacity-50"
       >
         {loading ? loadingLabel : label}
       </button>
@@ -806,7 +903,7 @@ function SubmitButton(props: {
     <button
       type="submit"
       disabled={loading || disabled}
-      className="w-full rounded-lg bg-sky-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-sky-700 disabled:opacity-50 dark:bg-sky-500 dark:hover:bg-sky-600"
+      className="min-h-11 w-full rounded-lg bg-[var(--accent)] px-4 py-3 text-sm font-black text-[var(--route-ink)] transition-colors hover:brightness-105 disabled:opacity-50"
     >
       {loading ? loadingLabel : label}
     </button>

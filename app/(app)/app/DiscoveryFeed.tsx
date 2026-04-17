@@ -75,13 +75,13 @@ export default function DiscoveryFeed({
           <>
             <Link
               href={createHref}
-              className="inline-flex items-center justify-center rounded-xl bg-sky-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-sky-700 dark:bg-sky-500 dark:hover:bg-sky-600"
+              className="inline-flex items-center justify-center rounded-lg bg-[var(--route-ink)] px-5 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-[var(--primary-dark)] dark:bg-[var(--primary)] dark:text-[var(--route-ink)]"
             >
               {t('offer_ride')}
             </Link>
             <Link
               href={browseHref}
-              className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+              className="inline-flex items-center justify-center rounded-lg border border-[var(--border-soft)] bg-[var(--surface)] px-4 py-2.5 text-sm font-bold text-[var(--muted-strong)] transition-colors hover:bg-[var(--primary-light)]"
             >
               {copy.refreshLater}
             </Link>
@@ -103,11 +103,11 @@ export default function DiscoveryFeed({
       {hubMatched.length > 0 && (
         <section className="space-y-3">
           <div className="flex items-center gap-2 px-1">
-            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">
+            <span className="text-xs font-black text-[var(--muted)]">
               {copy.ridesFrom(inferredHub ?? '')}
             </span>
-            <span className="flex-1 h-px bg-slate-100 dark:bg-slate-800" />
-            <span className="text-[11px] text-slate-400 dark:text-slate-500">
+            <span className="section-rule h-px flex-1" />
+            <span className="text-xs font-semibold text-[var(--muted)]">
               {copy.tripCount(hubMatched.length)}
             </span>
           </div>
@@ -121,14 +121,14 @@ export default function DiscoveryFeed({
 
       {allUpcoming.length > 0 && (
         <section
-          className={`space-y-3 ${hubMatched.length > 0 ? 'pt-2 border-t border-slate-100 dark:border-slate-800' : ''}`}
+          className={`space-y-3 ${hubMatched.length > 0 ? 'border-t border-[var(--border-soft)] pt-2' : ''}`}
         >
           <div className="flex items-center gap-2 px-1">
-            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">
+            <span className="text-xs font-black text-[var(--muted)]">
               {copy.upcomingRides}
             </span>
-            <span className="flex-1 h-px bg-slate-100 dark:bg-slate-800" />
-            <span className="text-[11px] text-slate-400 dark:text-slate-500">{copy.tripCount(allUpcoming.length)}</span>
+            <span className="section-rule h-px flex-1" />
+            <span className="text-xs font-semibold text-[var(--muted)]">{copy.tripCount(allUpcoming.length)}</span>
           </div>
           <div className="space-y-3">
             {allUpcoming.map((trip) => (
@@ -138,15 +138,15 @@ export default function DiscoveryFeed({
         </section>
       )}
 
-      <div className="rounded-3xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 px-4 py-4 shadow-sm">
-        <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+      <div className="soft-panel rounded-lg px-4 py-4 shadow-sm">
+        <p className="text-sm font-black text-[var(--foreground)]">
           {copy.needDifferentRoute}
         </p>
         <div className="flex flex-wrap gap-3 mt-2">
-          <Link href={createHref} className="text-sm font-bold text-sky-600 dark:text-sky-400 hover:underline">
+          <Link href={createHref} className="text-sm font-bold text-[var(--primary)] hover:underline">
             {t('offer_ride')}
           </Link>
-          <Link href={browseHref} className="text-sm font-bold text-slate-600 dark:text-slate-300 hover:underline">
+          <Link href={browseHref} className="text-sm font-bold text-[var(--muted-strong)] hover:underline">
             {copy.searchAgain}
           </Link>
         </div>

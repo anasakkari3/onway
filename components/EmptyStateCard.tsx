@@ -17,24 +17,24 @@ type Props = {
 const TONE_STYLES: Record<Tone, { shell: string; icon: string; eyebrow: string }> = {
   neutral: {
     shell:
-      'border-slate-200 bg-slate-50/80 dark:border-slate-800 dark:bg-slate-900/50',
+      'border-[var(--border-soft)] bg-[var(--surface-raised)]',
     icon:
-      'bg-white text-slate-600 ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700',
-    eyebrow: 'text-slate-500 dark:text-slate-400',
+      'bg-[var(--surface)] text-[var(--muted-strong)] ring-1 ring-[var(--border-soft)]',
+    eyebrow: 'text-[var(--muted)]',
   },
   sky: {
     shell:
-      'border-sky-200 bg-sky-50/80 dark:border-sky-800 dark:bg-sky-900/20',
+      'border-[var(--border-soft)] bg-[var(--primary-light)]',
     icon:
-      'bg-white text-sky-600 ring-1 ring-sky-200 dark:bg-slate-900 dark:text-sky-300 dark:ring-sky-800',
-    eyebrow: 'text-sky-600 dark:text-sky-300',
+      'bg-[var(--surface)] text-[var(--primary)] ring-1 ring-[var(--border-soft)]',
+    eyebrow: 'text-[var(--primary)]',
   },
   amber: {
     shell:
-      'border-amber-200 bg-amber-50/80 dark:border-amber-800 dark:bg-amber-900/20',
+      'border-[var(--border-soft)] bg-[var(--surface-raised)]',
     icon:
-      'bg-white text-amber-600 ring-1 ring-amber-200 dark:bg-slate-900 dark:text-amber-300 dark:ring-amber-800',
-    eyebrow: 'text-amber-700 dark:text-amber-300',
+      'bg-[var(--surface)] text-[var(--accent-strong)] ring-1 ring-[var(--border-soft)]',
+    eyebrow: 'text-[var(--accent-strong)]',
   },
 };
 
@@ -51,28 +51,28 @@ export default function EmptyStateCard({
 
   return (
     <div
-      className={`rounded-3xl border p-6 text-center shadow-sm sm:p-7 ${styles.shell} ${className}`.trim()}
+      className={`rounded-lg border p-6 text-center shadow-sm sm:p-7 ${styles.shell} ${className}`.trim()}
     >
       <div
-        className={`mx-auto flex h-14 w-14 items-center justify-center rounded-2xl shadow-sm ${styles.icon}`}
+        className={`mx-auto flex h-14 w-14 items-center justify-center rounded-lg shadow-sm ${styles.icon}`}
         aria-hidden="true"
       >
         {icon}
       </div>
 
       {eyebrow ? (
-        <p className={`mt-4 text-[11px] font-bold uppercase tracking-[0.18em] ${styles.eyebrow}`}>
+        <p className={`mt-4 text-xs font-black ${styles.eyebrow}`}>
           {eyebrow}
         </p>
       ) : null}
 
-      <h3 className="mt-3 text-lg font-bold text-slate-900 dark:text-slate-100">{title}</h3>
-      <p className="mx-auto mt-2 max-w-[28rem] text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+      <h3 className="display-title mt-3 text-lg font-black text-[var(--foreground)]">{title}</h3>
+      <p className="mx-auto mt-2 max-w-[28rem] text-sm leading-relaxed text-[var(--muted-strong)]">
         {description}
       </p>
 
       {actions ? (
-        <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
+        <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row [&>*]:min-h-11">
           {actions}
         </div>
       ) : null}

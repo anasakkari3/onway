@@ -155,10 +155,10 @@ export default function SavedPlaceChips({
     <div className="flex flex-col gap-1.5">
       {/* Context badge — tells user which field chips will fill */}
       {activeField && (places.length > 0 || showNudge) && (
-        <span className={`self-start text-[10px] font-bold uppercase tracking-widest px-1 ${
+        <span className={`self-start px-1 text-xs font-black ${
           activeField === 'destination'
-            ? 'text-emerald-600 dark:text-emerald-400'
-            : 'text-sky-600 dark:text-sky-400'
+            ? 'text-[var(--success)]'
+            : 'text-[var(--primary)]'
         }`}>
           {activeField === 'destination' ? copy.fillDestination : copy.fillOrigin}
         </span>
@@ -172,7 +172,7 @@ export default function SavedPlaceChips({
             <button
               type="button"
               onClick={() => onSelect(place.name)}
-              className="flex items-center gap-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 pl-3 pr-7 py-1.5 rounded-full text-slate-700 dark:text-slate-200 text-sm font-medium hover:border-sky-400 hover:text-sky-600 dark:hover:border-sky-500 dark:hover:text-sky-300 transition-colors shadow-sm"
+              className="flex items-center gap-1.5 rounded-lg border border-[var(--border-soft)] bg-[var(--surface)] py-1.5 pl-3 pr-7 text-sm font-semibold text-[var(--muted-strong)] shadow-sm transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)]"
             >
               <span className="text-base leading-none">{place.emoji}</span>
               <span dir="auto">{place.name}</span>
@@ -182,7 +182,7 @@ export default function SavedPlaceChips({
               type="button"
               aria-label={copy.deleteAriaLabel(place.name)}
               onClick={() => handleDelete(place.id)}
-              className="absolute right-1.5 top-1/2 -translate-y-1/2 hidden group-hover:flex h-4 w-4 items-center justify-center rounded-full bg-slate-200 dark:bg-slate-600 text-slate-500 dark:text-slate-300 hover:bg-red-100 dark:hover:bg-red-900/40 hover:text-red-500 transition-colors text-[10px] font-bold focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
+              className="absolute right-1.5 top-1/2 hidden h-4 w-4 -translate-y-1/2 items-center justify-center rounded-lg bg-[var(--surface-muted)] text-[10px] font-bold text-[var(--muted)] transition-colors hover:bg-red-100 hover:text-red-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400 group-hover:flex"
             >
               ✕
             </button>
@@ -195,7 +195,7 @@ export default function SavedPlaceChips({
             type="button"
             onClick={handleNudge}
             disabled={isPending}
-            className="shrink-0 flex items-center gap-1.5 border border-dashed border-amber-400 dark:border-amber-600 px-3 py-1.5 rounded-full text-amber-600 dark:text-amber-400 text-sm font-medium hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
+            className="flex shrink-0 items-center gap-1.5 rounded-lg border border-dashed border-[var(--accent-strong)] px-3 py-1.5 text-sm font-semibold text-[var(--accent-strong)] transition-colors hover:bg-[var(--surface-raised)]"
           >
             <span>🏠</span>
             <span dir="auto">{copy.saveHomeNudge(homeNudgeName!)}</span>
@@ -207,7 +207,7 @@ export default function SavedPlaceChips({
           <button
             type="button"
             onClick={() => setShowAdd(true)}
-            className="shrink-0 flex items-center gap-1 border border-dashed border-slate-300 dark:border-slate-700 px-3 py-1.5 rounded-full text-slate-400 dark:text-slate-500 text-sm hover:border-sky-400 hover:text-sky-500 dark:hover:border-sky-600 dark:hover:text-sky-400 transition-colors"
+            className="flex shrink-0 items-center gap-1 rounded-lg border border-dashed border-[var(--border-soft)] px-3 py-1.5 text-sm text-[var(--muted)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)]"
           >
             <span className="text-base leading-none font-light">+</span>
             <span>{copy.addPlace}</span>
@@ -217,7 +217,7 @@ export default function SavedPlaceChips({
 
       {/* Inline add form */}
       {showAdd && (
-        <div className="flex flex-col gap-2 bg-slate-50 dark:bg-slate-800/60 rounded-2xl p-3 border border-slate-200 dark:border-slate-700">
+        <div className="soft-panel flex flex-col gap-2 rounded-lg p-3">
           {/* Label picker */}
           <div className="flex gap-1.5 flex-wrap">
             {labelOptions.map((opt) => (
@@ -225,10 +225,10 @@ export default function SavedPlaceChips({
                 key={opt.value}
                 type="button"
                 onClick={() => setNewLabel(opt.value)}
-                className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border transition-colors ${
+                className={`flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-semibold transition-colors ${
                   newLabel === opt.value
-                    ? 'border-sky-400 bg-sky-50 text-sky-700 dark:border-sky-600 dark:bg-sky-900/30 dark:text-sky-300'
-                    : 'border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'
+                    ? 'border-[var(--primary)] bg-[var(--primary-light)] text-[var(--primary-dark)]'
+                    : 'border-[var(--border-soft)] text-[var(--muted)] hover:border-[var(--primary)]'
                 }`}
               >
                 {opt.emoji} {opt.label}
@@ -246,12 +246,12 @@ export default function SavedPlaceChips({
               placeholder={copy.saveName}
               autoFocus
               dir="auto"
-              className="flex-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-sky-400 dark:focus:border-sky-500"
+              className="flex-1 rounded-lg border border-[var(--border-soft)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:border-[var(--primary)] focus:outline-none"
             />
             <button
               type="button"
               onClick={() => { setShowAdd(false); setNewName(''); }}
-              className="px-3 py-2 rounded-xl text-sm text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+              className="rounded-lg px-3 py-2 text-sm text-[var(--muted)] transition-colors hover:bg-[var(--surface-muted)]"
             >
               {copy.cancel}
             </button>
@@ -259,7 +259,7 @@ export default function SavedPlaceChips({
               type="button"
               onClick={handleAdd}
               disabled={!newName.trim() || isPending}
-              className="px-3 py-2 rounded-xl bg-sky-500 text-white text-sm font-semibold hover:bg-sky-600 disabled:opacity-40 transition-colors"
+              className="rounded-lg bg-[var(--primary)] px-3 py-2 text-sm font-bold text-white transition-colors hover:bg-[var(--primary-dark)] disabled:opacity-40 dark:text-[var(--route-ink)]"
             >
               {copy.save}
             </button>

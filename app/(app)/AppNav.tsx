@@ -70,12 +70,12 @@ export default function AppNav() {
   return (
     <nav
       aria-label={navLabel}
-      className="fixed inset-x-0 top-0 z-50 border-b border-slate-200/70 bg-white/88 shadow-sm backdrop-blur-xl dark:border-slate-800/80 dark:bg-slate-950/86 animate-slide-down"
+      className="app-nav fixed inset-x-0 top-0 z-50 border-b backdrop-blur-xl animate-slide-down"
     >
       <div className="mx-auto flex h-16 max-w-5xl items-center justify-between gap-2 px-2.5 sm:gap-3 sm:px-4">
         <Link
           href="/app"
-          className="group flex min-w-0 shrink-0 items-center rounded-2xl max-w-[84px] sm:max-w-none"
+          className="group flex min-w-0 shrink-0 items-center rounded-lg max-w-[84px] sm:max-w-none"
           aria-label={t('home')}
         >
           <BrandLogo
@@ -94,9 +94,9 @@ export default function AppNav() {
                 href={href}
                 aria-label={label}
                 aria-current={active ? 'page' : undefined}
-                className={`nav-link relative flex h-9 min-w-9 shrink-0 items-center justify-center gap-1 rounded-2xl px-0 py-0 text-sm font-medium transition-all duration-200 sm:h-auto sm:min-w-[42px] sm:gap-1.5 sm:px-2.5 sm:py-2.5 md:justify-start md:px-3.5 ${active
-                  ? 'bg-sky-50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300'
-                  : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/60 dark:hover:text-white'
+                className={`nav-link relative flex h-9 min-w-9 shrink-0 items-center justify-center gap-1 rounded-lg px-0 py-0 text-sm font-semibold transition-all duration-200 sm:h-auto sm:min-w-[42px] sm:gap-1.5 sm:px-2.5 sm:py-2.5 md:justify-start md:px-3.5 ${active
+                  ? 'bg-[var(--route-ink)] text-white shadow-sm dark:bg-[var(--primary)] dark:text-[var(--route-ink)]'
+                  : 'text-[var(--muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--muted-strong)]'
                   }`}
               >
                 <span className={`transition-transform duration-200 ${active ? 'scale-110' : ''}`}>
@@ -104,7 +104,7 @@ export default function AppNav() {
                 </span>
                 <span className="hidden md:inline">{label}</span>
                 {active && (
-                  <span className="absolute bottom-1 left-1/2 h-0.5 w-5 -translate-x-1/2 rounded-full bg-sky-600 dark:bg-sky-400 animate-scale-in" />
+                  <span className="absolute bottom-1 left-1/2 h-0.5 w-5 -translate-x-1/2 rounded-full bg-[var(--accent)] animate-scale-in" />
                 )}
               </Link>
             );

@@ -237,22 +237,18 @@ export default async function HomePage(props: {
       : t('welcome_to_ride_match');
 
   return (
-    <div className="pb-8 space-y-6">
+    <div className="pb-10 space-y-7">
       <PwaInstallPrompt />
 
-      <div className="relative bg-gradient-to-br from-sky-600 via-sky-600 to-cyan-700 dark:from-sky-800 dark:via-slate-900 dark:to-slate-950 pt-8 pb-16 px-4 -mt-16 w-full max-w-lg mx-auto overflow-hidden">
-        <div className="absolute top-0 right-0 w-72 h-72 bg-white opacity-[0.06] rounded-full blur-3xl transform translate-x-1/3 -translate-y-1/3" />
-        <div className="absolute bottom-0 left-0 w-56 h-56 bg-cyan-300 opacity-[0.08] rounded-full blur-3xl transform -translate-x-1/2 translate-y-1/2" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-sky-400/5 rounded-full blur-3xl pointer-events-none" />
-
+      <div className="app-hero relative pt-8 pb-16 px-4 -mt-16 w-full max-w-2xl mx-auto overflow-hidden rounded-b-lg">
         <div className="relative z-10 pt-16 animate-fade-in-up">
-          <p className="text-sky-200/80 text-xs font-semibold uppercase tracking-widest mb-2" dir="auto">
+          <p className="mb-3 inline-flex rounded-lg border border-white/15 bg-white/10 px-2.5 py-1 text-xs font-bold text-white/80 backdrop-blur" dir="auto">
             {heroScopeLabel}
           </p>
-          <h1 className="text-3xl font-extrabold text-white tracking-tight drop-shadow-sm">
+          <h1 className="display-title text-4xl font-black text-white drop-shadow-sm sm:text-5xl">
             {heroTitle}
           </h1>
-          <p className="text-sky-100/80 text-sm mt-2 max-w-[320px] leading-relaxed">
+          <p className="mt-3 max-w-[420px] text-sm leading-relaxed text-white/80 sm:text-base">
             {isSearchActive
               ? selectedCommunity
                 ? copy.searchScoped(selectedCommunity.name)
@@ -266,7 +262,7 @@ export default async function HomePage(props: {
         </div>
       </div>
 
-      <div className="px-4 max-w-lg mx-auto space-y-6 -mt-10 relative z-20">
+      <div className="px-4 max-w-2xl mx-auto space-y-7 -mt-10 relative z-20">
         {joinedCommunities.length > 0 && (
           <section className="animate-fade-in-up stagger-1">
             <CommunitySwitcher
@@ -286,7 +282,7 @@ export default async function HomePage(props: {
         <section className="animate-fade-in-up stagger-2 space-y-3">
           {!isSearchActive && (
             <div className="px-1">
-              <span className="inline-flex items-center rounded-full bg-white/95 dark:bg-slate-900 px-3 py-1 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest shadow-sm border border-slate-200 dark:border-slate-800">
+              <span className="surface-card inline-flex items-center rounded-lg px-3 py-1 text-xs font-black text-[var(--muted-strong)]">
                 {copy.findRide}
               </span>
             </div>
@@ -314,10 +310,10 @@ export default async function HomePage(props: {
                     destinationName: route.dest,
                     driverGender: driverGenderQuery,
                   })}
-                  className="shrink-0 flex items-center gap-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-full text-slate-700 dark:text-slate-300 font-medium hover:bg-sky-50 dark:hover:bg-slate-700 transition-colors shadow-sm"
+                  className="surface-card shrink-0 flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-bold text-[var(--muted-strong)] transition-colors hover:bg-[var(--primary-light)]"
                 >
                   <span dir="auto">{route.origin}</span>
-                  <span className="text-slate-400 opacity-60 px-0.5">→</span>
+                  <span className="px-0.5 text-[var(--accent-strong)] opacity-80">→</span>
                   <span dir="auto">{route.dest}</span>
                 </Link>
               ))}
@@ -358,36 +354,33 @@ export default async function HomePage(props: {
           <>
             <section className="animate-fade-in-up stagger-3">
               <div className="flex items-center gap-2 px-1 mb-3">
-                <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">
+                <span className="text-xs font-black text-[var(--muted)]">
                   {copy.offerRideSection}
                 </span>
-                <span className="flex-1 h-px bg-slate-100 dark:bg-slate-800" />
+                <span className="section-rule h-px flex-1" />
               </div>
 
               <Link
                 href={createTripHref}
-                className="block rounded-3xl bg-gradient-to-br from-slate-900 to-slate-800 dark:from-slate-800 dark:to-slate-900 p-5 shadow-lg card-hover relative overflow-hidden group ring-1 ring-white/5"
+                className="route-cta card-hover group relative block overflow-hidden rounded-lg p-5"
               >
-                <div className="absolute top-0 right-0 w-32 h-32 bg-sky-500 opacity-20 rounded-full blur-3xl group-hover:opacity-30 transition-opacity ltr:translate-x-1/3 ltr:-translate-y-1/3 rtl:-translate-x-1/3 rtl:-translate-y-1/3" />
-                <div className="absolute bottom-0 left-0 w-24 h-24 bg-emerald-500 opacity-20 rounded-full blur-2xl ltr:-translate-x-1/3 ltr:translate-y-1/3 rtl:translate-x-1/3 rtl:translate-y-1/3" />
-
                 <div className="relative z-10 flex items-center justify-between">
                   <div>
-                    <p className="text-[10px] font-bold text-sky-300 dark:text-sky-400 uppercase tracking-widest mb-1">
+                    <p className="mb-1 text-xs font-black text-[var(--accent)]">
                       {t('offer_ride')}
                     </p>
-                    <h3 className="text-lg font-bold text-white mb-0.5">
+                    <h3 className="display-title mb-1 text-xl font-black text-white">
                       {t('create_new_trip')}
                     </h3>
-                    <p className="text-sm text-slate-400 dark:text-slate-300 max-w-[220px]">
+                    <p className="max-w-[280px] text-sm leading-relaxed text-white/72">
                       {selectedCommunity
                         ? copy.postInCommunity(selectedCommunity.name)
                         : hasMultipleCommunities
                           ? copy.chooseCommunityFirst
                           : copy.offerRidePrompt}
-                    </p>
+                      </p>
                   </div>
-                  <div className="h-12 w-12 rounded-full bg-white/10 flex items-center justify-center backdrop-blur-sm group-hover:scale-110 transition-transform rtl:-scale-x-100 rtl:group-hover:-scale-x-110">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-white/10 backdrop-blur-sm transition-transform group-hover:scale-105 rtl:-scale-x-100 rtl:group-hover:-scale-x-105">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2" /><circle cx="7" cy="17" r="2" /><path d="M9 17h6" /><circle cx="17" cy="17" r="2" /></svg>
                   </div>
                 </div>
@@ -397,11 +390,11 @@ export default async function HomePage(props: {
             {hasActivity && (
               <section className="animate-fade-in-up stagger-4 space-y-3">
                 <div className="flex items-center gap-2 px-1">
-                  <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">
+                  <span className="text-xs font-black text-[var(--muted)]">
                     {t('your_activity')}
                   </span>
-                  <span className="flex-1 h-px bg-slate-100 dark:bg-slate-800" />
-                  <Link href="/trips/my-rides" className="text-[11px] text-sky-600 dark:text-sky-400 font-semibold hover:underline">
+                  <span className="section-rule h-px flex-1" />
+                  <Link href="/trips/my-rides" className="text-xs font-bold text-[var(--primary)] hover:underline">
                     {copy.activityLink}
                   </Link>
                 </div>
@@ -411,20 +404,20 @@ export default async function HomePage(props: {
                     {myBookings.slice(0, 2).map((trip) => {
                       const statusUi = getTripStatusPresentationWithTranslation(trip, (key) => t(key));
                       return (
-                        <Link key={trip.id} href={`/trips/${trip.id}`} className="block rounded-3xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm card-hover">
+                        <Link key={trip.id} href={`/trips/${trip.id}`} className="route-card card-hover block rounded-lg p-4">
                           <div className="flex items-center gap-3">
-                            <div className={`flex h-12 w-12 items-center justify-center rounded-2xl text-xl shrink-0 ${statusUi.accentClassName}`}>T</div>
+                            <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg text-xl ${statusUi.accentClassName}`}>T</div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 justify-between">
-                                <p className="text-[10px] font-bold text-sky-600 dark:text-sky-400 uppercase tracking-widest mb-0.5">{copy.bookedRole}</p>
-                                <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${statusUi.chipClassName}`}>
+                                <p className="mb-0.5 text-xs font-black text-[var(--primary)]">{copy.bookedRole}</p>
+                                <span className={`shrink-0 rounded-lg px-2.5 py-1 text-[10px] font-bold ${statusUi.chipClassName}`}>
                                   {statusUi.label}
                                 </span>
                               </div>
-                              <p className="font-semibold text-slate-900 dark:text-slate-100 truncate" dir="auto">{trip.origin_name} → {trip.destination_name}</p>
+                              <p className="truncate font-bold text-[var(--foreground)]" dir="auto">{trip.origin_name} → {trip.destination_name}</p>
                               <div className="mt-1 flex flex-wrap items-center gap-2">
                                 <CommunityBadge name={trip.community_name} type={trip.community_type} compact />
-                                <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                                <span className="text-xs font-medium text-[var(--muted)]">
                                   {formatLocalizedDate(lang, trip.departure_time, { weekday: 'short', month: 'short', day: 'numeric' })}
                                 </span>
                               </div>
@@ -441,20 +434,20 @@ export default async function HomePage(props: {
                     {myTrips.slice(0, 2).map((trip) => {
                       const statusUi = getTripStatusPresentationWithTranslation(trip, (key) => t(key));
                       return (
-                        <Link key={trip.id} href={`/trips/${trip.id}`} className="block rounded-3xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm card-hover">
+                        <Link key={trip.id} href={`/trips/${trip.id}`} className="route-card card-hover block rounded-lg p-4">
                           <div className="flex items-center gap-3">
-                            <div className={`flex h-12 w-12 items-center justify-center rounded-2xl text-xl shrink-0 ${statusUi.accentClassName}`}>C</div>
+                            <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg text-xl ${statusUi.accentClassName}`}>C</div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 justify-between">
-                                <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mb-0.5">{copy.drivingRole}</p>
-                                <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${statusUi.chipClassName}`}>
+                                <p className="mb-0.5 text-xs font-black text-[var(--success)]">{copy.drivingRole}</p>
+                                <span className={`shrink-0 rounded-lg px-2.5 py-1 text-[10px] font-bold ${statusUi.chipClassName}`}>
                                   {statusUi.label}
                                 </span>
                               </div>
-                              <p className="font-semibold text-slate-900 dark:text-slate-100 truncate" dir="auto">{trip.origin_name} → {trip.destination_name}</p>
+                              <p className="truncate font-bold text-[var(--foreground)]" dir="auto">{trip.origin_name} → {trip.destination_name}</p>
                               <div className="mt-1 flex flex-wrap items-center gap-2">
                                 <CommunityBadge name={trip.community_name} type={trip.community_type} compact />
-                                <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                                <span className="text-xs font-medium text-[var(--muted)]">
                                   {formatLocalizedDate(lang, trip.departure_time, { weekday: 'short', month: 'short', day: 'numeric' })}
                                 </span>
                               </div>
@@ -471,10 +464,10 @@ export default async function HomePage(props: {
             {feedCommunityIds.length > 0 && (
               <section className="animate-fade-in-up stagger-5 space-y-3">
                 <div className="flex items-center gap-2 px-1">
-                  <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">
+                  <span className="text-xs font-black text-[var(--muted)]">
                     {t('available_rides')}
                   </span>
-                  <span className="flex-1 h-px bg-slate-100 dark:bg-slate-800" />
+                  <span className="section-rule h-px flex-1" />
                 </div>
                 <DiscoveryFeed
                   trips={feedTrips}
@@ -506,7 +499,7 @@ export default async function HomePage(props: {
             actions={
               <Link
                 href="/community"
-                className="inline-flex items-center justify-center rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-amber-600 dark:bg-amber-600 dark:hover:bg-amber-500"
+                className="inline-flex items-center justify-center rounded-lg bg-[var(--accent-strong)] px-5 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:opacity-90"
               >
                 {t('join_community')}
               </Link>

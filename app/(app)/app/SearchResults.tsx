@@ -21,7 +21,7 @@ type SearchResultsProps = {
 const COPY = {
   en: {
     noTripsFound: 'No trips found for this route',
-    noTripsDesc: 'Nobody is driving this route yet. You can go back to browse other rides, or create this trip yourself.',
+    noTripsDesc: 'Try another route or create one.',
     browseAll: 'Browse all rides',
     createExactRoute: 'Create your exact route',
     createInstead: 'Create this trip instead',
@@ -36,7 +36,7 @@ const COPY = {
   },
   ar: {
     noTripsFound: 'لم نعثر على رحلات لهذا المسار',
-    noTripsDesc: 'لا أحد يقود هذا المسار الآن. يمكنك العودة لتصفح رحلات أخرى أو إنشاء هذه الرحلة بنفسك.',
+    noTripsDesc: 'جرب مساراً آخر أو أنشئ رحلة.',
     browseAll: 'تصفح كل الرحلات',
     createExactRoute: 'أنشئ مسارك الدقيق',
     createInstead: 'أنشئ هذه الرحلة بدلًا من ذلك',
@@ -51,7 +51,7 @@ const COPY = {
   },
   he: {
     noTripsFound: 'לא נמצאו נסיעות למסלול הזה',
-    noTripsDesc: 'עדיין אף אחד לא נוסע במסלול הזה. אפשר לחזור לעיין בנסיעות אחרות או ליצור את הנסיעה בעצמכם.',
+    noTripsDesc: 'נסו מסלול אחר או צרו אחד.',
     browseAll: 'עיינו בכל הנסיעות',
     createExactRoute: 'צרו את המסלול המדויק',
     createInstead: 'צרו את הנסיעה הזו במקום',
@@ -123,7 +123,7 @@ export default async function SearchResults({
       {routeDemandFields}
       <button
         type="submit"
-        className="inline-flex items-center justify-center rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-amber-600 dark:bg-amber-600 dark:hover:bg-amber-500"
+        className="inline-flex items-center justify-center rounded-lg bg-[var(--accent-strong)] px-5 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:opacity-90"
       >
         {t('demand_request_and_alert')}
       </button>
@@ -134,7 +134,7 @@ export default async function SearchResults({
       {routeDemandFields}
       <button
         type="submit"
-        className="text-sm font-bold text-slate-600 dark:text-slate-300 hover:underline"
+        className="text-sm font-bold text-[var(--muted-strong)] hover:underline"
       >
         {t('demand_alert_only')}
       </button>
@@ -145,9 +145,9 @@ export default async function SearchResults({
     return (
       <div className="space-y-3 mt-2 animate-fade-in-up">
         {demandSaved && (
-          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4 dark:border-emerald-800 dark:bg-emerald-900/20">
+          <div className="rounded-lg border border-[var(--border-soft)] bg-[var(--primary-light)] px-4 py-4">
             <div className="flex items-start gap-3">
-              <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-300">
+              <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--surface)] text-[var(--success)]">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg>
               </div>
               <div className="min-w-0 flex-1">
@@ -156,7 +156,7 @@ export default async function SearchResults({
                 {routeDemandStatus === 'requested' && (
                   <Link
                     href={createHref}
-                    className="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-emerald-700 px-3 py-1.5 text-xs font-bold text-white transition-colors hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-500"
+                    className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-[var(--success)] px-3 py-1.5 text-xs font-bold text-white transition-colors hover:opacity-90"
                   >
                     {copy.createInstead}
                     <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
@@ -186,13 +186,13 @@ export default async function SearchResults({
                 href={createHref}
                 trackEvent="create_trip_cta_clicked"
                 trackPayload={{ context: 'no_results' }}
-                className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                className="inline-flex items-center justify-center rounded-lg border border-[var(--border-soft)] bg-[var(--surface)] px-4 py-2.5 text-sm font-bold text-[var(--muted-strong)] transition-colors hover:bg-[var(--primary-light)]"
               >
                 {copy.createInstead}
               </TrackedLink>
               <Link
                 href={browseHref}
-                className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                className="inline-flex items-center justify-center rounded-lg border border-[var(--border-soft)] bg-[var(--surface)] px-4 py-2.5 text-sm font-bold text-[var(--muted-strong)] transition-colors hover:bg-[var(--primary-light)]"
               >
                 {copy.browseAll}
               </Link>
@@ -206,11 +206,11 @@ export default async function SearchResults({
   if (exactMatches.length === 0 && recommendations.length > 0) {
     return (
       <div className="space-y-5 animate-fade-in-up mt-2">
-        <div className="rounded-3xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 px-5 py-4 shadow-sm">
+        <div className="soft-panel rounded-lg px-5 py-4 shadow-sm">
           {demandSaved && (
-            <div className="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4 dark:border-emerald-800 dark:bg-emerald-900/20">
+            <div className="mb-4 rounded-lg border border-[var(--border-soft)] bg-[var(--primary-light)] px-4 py-4">
               <div className="flex items-start gap-3">
-                <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-300">
+                <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--surface)] text-[var(--success)]">
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg>
                 </div>
                 <div>
@@ -221,7 +221,7 @@ export default async function SearchResults({
             </div>
           )}
           <div className="flex items-start gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-slate-600 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:ring-slate-700">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[var(--surface)] text-[var(--muted-strong)] shadow-sm ring-1 ring-[var(--border-soft)]">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="11" cy="11" r="7" />
                 <path d="m21 21-4.3-4.3" />
@@ -229,10 +229,10 @@ export default async function SearchResults({
               </svg>
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+              <p className="text-sm font-black text-[var(--foreground)]">
                 {copy.noExactTrip}
               </p>
-              <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+              <p className="mt-1 text-sm text-[var(--muted-strong)]">
                 {copy.showingSimilar(recommendations.length)}
               </p>
             </div>
@@ -242,13 +242,13 @@ export default async function SearchResults({
               href={createHref}
               trackEvent="create_trip_cta_clicked"
               trackPayload={{ context: 'similar_results' }}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--route-ink)] px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-[var(--primary-dark)] dark:bg-[var(--primary)] dark:text-[var(--route-ink)]"
             >
               {copy.createExactRoute}
               <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
             </TrackedLink>
             {alertRouteAction}
-            <Link href={browseHref} className="text-sm font-semibold text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300">
+            <Link href={browseHref} className="text-sm font-semibold text-[var(--muted)] hover:text-[var(--muted-strong)]">
               {copy.browseAll}
             </Link>
           </div>
@@ -256,11 +256,11 @@ export default async function SearchResults({
 
         <section className="space-y-3">
           <div className="flex items-center gap-2 px-1">
-            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">
+            <span className="text-xs font-black text-[var(--muted)]">
               {copy.similarRoutes}
             </span>
-            <span className="flex-1 h-px bg-slate-100 dark:bg-slate-800" />
-            <span className="text-[11px] text-slate-400 dark:text-slate-500">
+            <span className="section-rule h-px flex-1" />
+            <span className="text-xs font-semibold text-[var(--muted)]">
               {copy.routeCount(recommendations.length)}
             </span>
           </div>
@@ -275,7 +275,7 @@ export default async function SearchResults({
           href={createHref}
           trackEvent="create_trip_cta_clicked"
           trackPayload={{ context: 'similar_results_bottom' }}
-          className="flex items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-sm font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+          className="flex items-center justify-center gap-2 rounded-lg border border-dashed border-[var(--border-soft)] bg-[var(--surface)] px-4 py-3 text-sm font-bold text-[var(--muted-strong)] transition-colors hover:bg-[var(--primary-light)]"
         >
           <span>+</span>
           <span>{copy.exactRouteInstead}</span>
@@ -288,13 +288,13 @@ export default async function SearchResults({
     <div className="space-y-5 animate-fade-in-up mt-2">
       <section className="space-y-3">
         <div className="flex items-center gap-2 px-1">
-          <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">
-            {copy.routeTrips}
-          </span>
-          <span className="flex-1 h-px bg-slate-100 dark:bg-slate-800" />
-          <span className="text-[11px] text-slate-400 dark:text-slate-500">
-            {copy.routeCount(exactMatches.length)}
-          </span>
+            <span className="text-xs font-black text-[var(--muted)]">
+              {copy.routeTrips}
+            </span>
+          <span className="section-rule h-px flex-1" />
+            <span className="text-xs font-semibold text-[var(--muted)]">
+              {copy.routeCount(exactMatches.length)}
+            </span>
         </div>
         <div className="space-y-3">
           {exactMatches.map((trip) => (
@@ -304,13 +304,13 @@ export default async function SearchResults({
       </section>
 
       {recommendations.length > 0 && (
-        <section className="space-y-3 pt-2 border-t border-slate-100 dark:border-slate-800">
+        <section className="space-y-3 border-t border-[var(--border-soft)] pt-2">
           <div className="flex items-center gap-2 px-1">
-            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">
+            <span className="text-xs font-black text-[var(--muted)]">
               {copy.similarRoutes}
             </span>
-            <span className="flex-1 h-px bg-slate-100 dark:bg-slate-800" />
-            <span className="text-[11px] text-slate-400 dark:text-slate-500">{copy.routeCount(recommendations.length)}</span>
+            <span className="section-rule h-px flex-1" />
+            <span className="text-xs font-semibold text-[var(--muted)]">{copy.routeCount(recommendations.length)}</span>
           </div>
           <div className="space-y-3">
             {recommendations.map((trip) => (
@@ -320,11 +320,11 @@ export default async function SearchResults({
         </section>
       )}
 
-      <div className="rounded-3xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 px-4 py-4 shadow-sm">
+      <div className="soft-panel rounded-lg px-4 py-4 shadow-sm">
         {demandSaved && (
-          <div className="mb-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4 dark:border-emerald-800 dark:bg-emerald-900/20">
+          <div className="mb-3 rounded-lg border border-[var(--border-soft)] bg-[var(--primary-light)] px-4 py-4">
             <div className="flex items-start gap-3">
-              <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-300">
+              <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--surface)] text-[var(--success)]">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg>
               </div>
               <div>
@@ -334,7 +334,7 @@ export default async function SearchResults({
             </div>
           </div>
         )}
-        <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+        <p className="text-sm font-black text-[var(--foreground)]">
           {copy.wrongTime}
         </p>
         <div className="flex flex-wrap gap-3 mt-2">
@@ -342,11 +342,11 @@ export default async function SearchResults({
             href={createHref}
             trackEvent="create_trip_cta_clicked"
             trackPayload={{ context: 'has_results_wrong_time' }}
-            className="text-sm font-bold text-sky-600 dark:text-sky-400 hover:underline"
+            className="text-sm font-bold text-[var(--primary)] hover:underline"
           >
             {copy.createInstead}
           </TrackedLink>
-          <Link href={browseHref} className="text-sm font-bold text-slate-600 dark:text-slate-300 hover:underline">
+          <Link href={browseHref} className="text-sm font-bold text-[var(--muted-strong)] hover:underline">
             {copy.backToBrowse}
           </Link>
           {alertRouteAction}
