@@ -4,8 +4,14 @@ export default function RideCardSkeleton({ count = 3 }: { count?: number }) {
       {Array.from({ length: count }).map((_, index) => (
         <div key={index} className="decision-card decision-card--skeleton" aria-hidden="true">
           <div className="decision-card__topline">
-            <span className="skeleton-block h-5 w-28" />
-            <span className="skeleton-block h-5 w-12" />
+            <div className="decision-card__driver">
+              <span className="skeleton-block h-11 w-11 rounded-full" />
+              <span className="skeleton-stack">
+                <span className="skeleton-block h-4 w-24" />
+                <span className="skeleton-block h-3 w-32" />
+              </span>
+            </div>
+            <span className="skeleton-block h-8 w-16" />
           </div>
           <div className="decision-card__route">
             <div className="decision-card__route-line">
@@ -18,19 +24,13 @@ export default function RideCardSkeleton({ count = 3 }: { count?: number }) {
               <span className="skeleton-block h-5 w-36" />
             </div>
           </div>
-          <div className="decision-card__meta">
-            <span className="skeleton-block h-9 w-24" />
-            <span className="skeleton-block h-9 w-28" />
+          <div className="decision-card__pulse-row">
+            <span className="skeleton-block h-6 w-32" />
+            <span className="skeleton-block h-5 w-12" />
           </div>
-          <div className="decision-card__people">
-            <div className="decision-card__driver">
-              <span className="skeleton-block h-9 w-9 rounded-full" />
-              <span className="skeleton-stack">
-                <span className="skeleton-block h-4 w-24" />
-                <span className="skeleton-block h-3 w-32" />
-              </span>
-            </div>
-            <span className="skeleton-block h-8 w-20" />
+          <div className="decision-card__signal-grid">
+            <span className="skeleton-block h-14 w-full" />
+            <span className="skeleton-block h-14 w-full" />
           </div>
           <div className="decision-card__footer">
             <span className="skeleton-block h-4 w-36" />

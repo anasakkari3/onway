@@ -5,6 +5,7 @@ import type { TrustBadge, TrustProfile } from '@/lib/types';
 
 export type CompletedRideStats = {
   completedDrives: number;
+  cancelledDrives: number;
   completedJoins: number;
 };
 
@@ -54,10 +55,14 @@ export async function getCompletedRideStats(
 ): Promise<CompletedRideStats> {
   const db = passedDb ?? getAdminFirestore();
 
-  const [drivesSnap, joinedBookingsSnap] = await Promise.all([
+  const [drivesSnap, cancelledDrivesSnap, joinedBookingsSnap] = await Promise.all([
     db.collection('trips')
       .where('driver_id', '==', userId)
       .where('status', '==', 'completed')
+      .get(),
+    db.collection('trips')
+      .where('driver_id', '==', userId)
+      .where('status', '==', 'cancelled')
       .get(),
     db.collection('bookings')
       .where('passenger_id', '==', userId)
@@ -68,13 +73,16 @@ export async function getCompletedRideStats(
   const completedDrives = drivesSnap.docs.filter((doc) =>
     isAllowedCommunityId(doc.data().community_id)
   ).length;
+  const cancelledDrives = cancelledDrivesSnap.docs.filter((doc) =>
+    isAllowedCommunityId(doc.data().community_id)
+  ).length;
 
   const joinedTripIds = [
     ...new Set(joinedBookingsSnap.docs.map((d) => d.data().trip_id as string)),
   ];
 
   if (joinedTripIds.length === 0) {
-    return { completedDrives, completedJoins: 0 };
+    return { completedDrives, cancelledDrives, completedJoins: 0 };
   }
 
   // Batch read trips in chunks of 30 (Firestore `in` limit) instead of N serial reads.
@@ -99,7 +107,7 @@ export async function getCompletedRideStats(
     }
   }
 
-  return { completedDrives, completedJoins };
+  return { completedDrives, cancelledDrives, completedJoins };
 }
 
 function clampScore(value: number) {
@@ -158,6 +166,7 @@ export function calculateTrustScore(input: {
   emailVerified: boolean;
   communitiesCount: number;
   driverTripsCount: number;
+  driverCancelledTripsCount?: number;
   riderTripsCount: number;
   profileCompletion: number;
 }): number {
@@ -178,15 +187,18 @@ export function calculateTrustScore(input: {
   const driverPoints = Math.min(input.driverTripsCount, 10) * 5;
   const riderPoints = Math.min(input.riderTripsCount, 5) * 3;
   const profilePoints = Math.min(input.profileCompletion, 100) * 0.1;
+  const cancellationPenalty = Math.min(Math.max(0, input.driverCancelledTripsCount ?? 0), 5) * 5;
 
-  return clampScore(emailPoints + driverPoints + riderPoints + profilePoints);
+  return clampScore(emailPoints + driverPoints + riderPoints + profilePoints - cancellationPenalty);
 }
 
 export function getTrustBadges(input: {
   emailVerified: boolean;
   communitiesCount: number;
   driverTripsCount: number;
+  driverCancelledTripsCount?: number;
   riderTripsCount: number;
+  profileCompletion?: number;
 }): TrustBadge[] {
   const badges: TrustBadge[] = [];
 
@@ -201,6 +213,12 @@ export function getTrustBadges(input: {
   }
   if (input.communitiesCount >= 1) {
     badges.push({ key: 'community_member', label: 'Community Member' });
+  }
+  if ((input.profileCompletion ?? 0) >= 85) {
+    badges.push({ key: 'complete_profile', label: 'Profile Ready' });
+  }
+  if (input.driverTripsCount >= 3 && (input.driverCancelledTripsCount ?? 0) === 0) {
+    badges.push({ key: 'steady_driver', label: 'Steady Driver' });
   }
 
   return badges;
@@ -238,15 +256,23 @@ export async function getUserTrustProfile(
     emailVerified,
     communitiesCount,
     driverTripsCount: stats.completedDrives,
+    driverCancelledTripsCount: stats.cancelledDrives,
     riderTripsCount: stats.completedJoins,
     profileCompletion,
   });
+  const driverTripOutcomeCount = stats.completedDrives + stats.cancelledDrives;
+  const driverReliabilityRate =
+    driverTripOutcomeCount > 0
+      ? clampScore((stats.completedDrives / driverTripOutcomeCount) * 100)
+      : null;
 
   const trustProfile = {
     user_id: userId,
     email_verified: emailVerified,
     communities_count: communitiesCount,
     driver_trips_count: stats.completedDrives,
+    driver_cancelled_trips_count: stats.cancelledDrives,
+    driver_reliability_rate: driverReliabilityRate,
     rider_trips_count: stats.completedJoins,
     profile_completion: profileCompletion,
     trust_score: trustScore,
@@ -254,7 +280,9 @@ export async function getUserTrustProfile(
       emailVerified,
       communitiesCount,
       driverTripsCount: stats.completedDrives,
+      driverCancelledTripsCount: stats.cancelledDrives,
       riderTripsCount: stats.completedJoins,
+      profileCompletion,
     }),
   };
 
@@ -264,6 +292,8 @@ export async function getUserTrustProfile(
         email_verified: trustProfile.email_verified,
         communities_count: trustProfile.communities_count,
         driver_trips_count: trustProfile.driver_trips_count,
+        driver_cancelled_trips_count: trustProfile.driver_cancelled_trips_count,
+        driver_reliability_rate: trustProfile.driver_reliability_rate,
         rider_trips_count: trustProfile.rider_trips_count,
         profile_completion: trustProfile.profile_completion,
         trust_score: trustProfile.trust_score,

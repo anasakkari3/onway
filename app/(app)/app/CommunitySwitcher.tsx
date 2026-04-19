@@ -1,9 +1,12 @@
-import Link from 'next/link';
-import CommunityBadge from '@/components/CommunityBadge';
+import {
+  CommunityAllIdentityCard,
+  CommunityIdentityCard,
+} from '@/components/CommunityIdentityCard';
 import type { CommunityInfo } from '@/lib/types';
 
 type CommunitySwitcherItem = CommunityInfo & {
   href: string;
+  activeRideCount?: number | null;
 };
 
 type Props = {
@@ -14,6 +17,9 @@ type Props = {
   title?: string;
   description?: string;
   allLabel?: string;
+  allRideCount?: number | null;
+  activeRideCountLabel?: (count: number) => string;
+  typeLabel?: (community: CommunityInfo) => string;
 };
 
 export default function CommunitySwitcher({
@@ -24,10 +30,15 @@ export default function CommunitySwitcher({
   title = 'Community scope',
   description,
   allLabel = 'All joined',
+  allRideCount = null,
+  activeRideCountLabel,
+  typeLabel,
 }: Props) {
+  const selectedCommunity = communities.find((community) => community.id === selectedCommunityId);
+
   return (
-    <section className="surface-card rounded-lg p-4">
-      <div className="flex items-center justify-between gap-3">
+    <section className="community-switcher surface-card rounded-lg p-4">
+      <div className="community-switcher__header">
         <div>
           <p className="text-xs font-black text-[var(--muted)]">
             {title}
@@ -38,40 +49,42 @@ export default function CommunitySwitcher({
             </p>
           )}
         </div>
-        {selectedCommunityId && (
-          <CommunityBadge
-            name={communities.find((community) => community.id === selectedCommunityId)?.name}
-            type={communities.find((community) => community.id === selectedCommunityId)?.type}
-          />
+        {selectedCommunity && (
+          <span className="community-switcher__active-name" dir="auto">
+            {selectedCommunity.name}
+          </span>
         )}
       </div>
 
-      <div className="flex flex-wrap gap-2 mt-4">
+      <div className="community-switcher__rail">
         {showAllOption && (
-          <Link
+          <CommunityAllIdentityCard
             href={allHref ?? '/app'}
-            className={`rounded-lg px-3 py-2 text-xs font-bold transition-colors ${
-              !selectedCommunityId
-                ? 'bg-[var(--route-ink)] text-white dark:bg-[var(--primary)] dark:text-[var(--route-ink)]'
-                : 'bg-[var(--surface-muted)] text-[var(--muted-strong)] hover:bg-[var(--primary-light)]'
-            }`}
-          >
-            {allLabel}
-          </Link>
+            label={allLabel}
+            selected={!selectedCommunityId}
+            activeRideCountLabel={
+              typeof allRideCount === 'number' && activeRideCountLabel
+                ? activeRideCountLabel(allRideCount)
+                : null
+            }
+          />
         )}
 
         {communities.map((community) => (
-          <Link
+          <CommunityIdentityCard
             key={community.id}
+            community={community}
             href={community.href}
-            className={`rounded-lg px-3 py-2 text-xs font-bold transition-colors ${
-              selectedCommunityId === community.id
-                ? 'bg-[var(--primary)] text-white dark:text-[var(--route-ink)]'
-                : 'bg-[var(--surface-muted)] text-[var(--muted-strong)] hover:bg-[var(--primary-light)]'
-            }`}
-          >
-            {community.name}
-          </Link>
+            selected={selectedCommunityId === community.id}
+            size="compact"
+            typeLabel={typeLabel?.(community)}
+            activeRideCount={community.activeRideCount}
+            activeRideCountLabel={
+              typeof community.activeRideCount === 'number' && activeRideCountLabel
+                ? activeRideCountLabel(community.activeRideCount)
+                : null
+            }
+          />
         ))}
       </div>
     </section>

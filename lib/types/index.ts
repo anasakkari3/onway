@@ -121,6 +121,37 @@ export type BookingAcknowledgementsRow = {
   acknowledged_at: string;
 };
 
+export type MeetingPointSource = 'trusted' | 'custom';
+
+export type MeetingPointsRow = {
+  id: string;
+  community_id: string;
+  label: string;
+  location_context: string;
+  lat?: number | null;
+  lng?: number | null;
+  active?: boolean | null;
+  sort_order?: number | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
+
+export type PreDepartureConfirmationState =
+  | 'pending'
+  | 'confirmed'
+  | 'not_confirmed'
+  | 'expired';
+
+export type PreDepartureConfirmation = {
+  state: PreDepartureConfirmationState;
+  prompted_at?: string | null;
+  responded_at?: string | null;
+  confirmed_at?: string | null;
+  not_confirmed_at?: string | null;
+  expired_at?: string | null;
+  updated_at?: string | null;
+};
+
 /** Trip stored in Firestore `trips` collection */
 export type TripsRow = {
   id: string;
@@ -129,6 +160,10 @@ export type TripsRow = {
   origin_lat: number;
   origin_lng: number;
   origin_name: string;
+  origin_meeting_point_id?: string | null;
+  origin_meeting_point_label?: string | null;
+  origin_meeting_point_context?: string | null;
+  origin_meeting_point_source?: MeetingPointSource | null;
   destination_lat: number;
   destination_lng: number;
   destination_name: string;
@@ -157,6 +192,9 @@ export type TripsRow = {
   completed_at?: string | null;
   cancelled_at?: string | null;
   cancelled_by?: string | null;
+  pre_departure_driver_confirmation?: PreDepartureConfirmation | null;
+  pre_departure_prompted_at?: string | null;
+  pre_departure_expires_at?: string | null;
   // --- Recurring-trip metadata (absent / undefined on one-time trips) --------
   /** Absent or 'one_time' for legacy and one-time trips. Safe to default to 'one_time'. */
   trip_mode?: TripMode;
@@ -174,6 +212,7 @@ export type BookingsRow = {
   passenger_display_name?: string | null;
   passenger_avatar_url?: string | null;
   booking_acknowledgements?: BookingAcknowledgementsRow | null;
+  pre_departure_confirmation?: PreDepartureConfirmation | null;
   seats: number;
   status: 'pending' | 'confirmed' | 'cancelled';
   created_at: string;
@@ -307,7 +346,9 @@ export type TrustBadgeKey =
   | 'verified_email'
   | 'active_driver'
   | 'frequent_rider'
-  | 'community_member';
+  | 'community_member'
+  | 'steady_driver'
+  | 'complete_profile';
 
 export type TrustBadge = {
   key: TrustBadgeKey;
@@ -319,6 +360,8 @@ export type TrustProfile = {
   email_verified: boolean;
   communities_count: number;
   driver_trips_count: number;
+  driver_cancelled_trips_count: number;
+  driver_reliability_rate: number | null;
   rider_trips_count: number;
   profile_completion: number;
   trust_score: number;
@@ -354,6 +397,7 @@ export type TripWithDriver = TripsRow & {
   driver: UserProfile | null;
   driver_completed_drives?: number;
   driver_trust_profile?: TrustProfile | null;
+  current_user_booking?: BookingsRow | null;
 };
 
 /** Booking with optional passenger relation */
@@ -422,4 +466,35 @@ export type TripMembershipsRow = {
   role: TripMembershipRole;
   status: TripMembershipStatus;
   updated_at: string;
+};
+
+export type TripSubscriptionStatus = 'active' | 'cancelled';
+
+/**
+ * Recurring trip subscription stored in Firestore `trip_subscriptions` collection.
+ * When a rider subscribes to a recurring route, new trip occurrences published by
+ * the same driver on the same schedule are auto-booked on their behalf.
+ */
+export type TripSubscriptionsRow = {
+  id: string;
+  passenger_id: string;
+  driver_id: string;
+  community_id: string;
+  /** Normalized route snapshot used for display and matching. */
+  origin_name: string;
+  destination_name: string;
+  /** Recurring schedule copied from the source trip. */
+  recurring_days: WeekdayIndex[];
+  recurring_departure_time: string;
+  /** The trip occurrence the rider was on when they subscribed. */
+  source_trip_id: string;
+  status: TripSubscriptionStatus;
+  created_at: string;
+  cancelled_at?: string | null;
+  /** Last trip that was auto-booked for this subscription. */
+  last_booked_trip_id?: string | null;
+  last_booked_at?: string | null;
+  /** Last trip where auto-booking failed (e.g. full). */
+  last_failed_trip_id?: string | null;
+  last_failed_reason?: string | null;
 };

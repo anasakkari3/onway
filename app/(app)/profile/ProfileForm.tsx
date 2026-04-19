@@ -222,29 +222,29 @@ export default function ProfileForm({
     const driverLabel = isDriver === true ? copy.driverYesTitle : isDriver === false ? copy.driverNoTitle : '—';
 
     return (
-      <div className="space-y-4">
-        <div className="space-y-3">
-          <div>
+      <div className="profile-form">
+        <div className="profile-details-grid">
+          <div className="profile-detail-item">
             <p className="text-xs text-slate-500 dark:text-slate-400">{t('display_name')}</p>
             <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{displayName || '—'}</p>
           </div>
-          <div>
+          <div className="profile-detail-item">
             <p className="text-xs text-slate-500 dark:text-slate-400">{copy.phone}</p>
             <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{phone || '—'}</p>
           </div>
-          <div>
+          <div className="profile-detail-item">
             <p className="text-xs text-slate-500 dark:text-slate-400">{copy.city}</p>
             <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{cityOrArea || '—'}</p>
           </div>
-          <div>
+          <div className="profile-detail-item">
             <p className="text-xs text-slate-500 dark:text-slate-400">{copy.age}</p>
             <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{age || '—'}</p>
           </div>
-          <div>
+          <div className="profile-detail-item">
             <p className="text-xs text-slate-500 dark:text-slate-400">{copy.gender}</p>
             <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{genderLabel}</p>
           </div>
-          <div>
+          <div className="profile-detail-item">
             <p className="text-xs text-slate-500 dark:text-slate-400">{copy.driverQuestion}</p>
             <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{driverLabel}</p>
           </div>
@@ -252,7 +252,7 @@ export default function ProfileForm({
         <button
           type="button"
           onClick={() => setIsEditing(true)}
-          className="w-full rounded-xl bg-sky-600 dark:bg-sky-500 px-4 py-3 font-medium text-white hover:bg-sky-700 dark:hover:bg-sky-600 transition-colors"
+          className="profile-primary-button w-full rounded-xl bg-sky-600 dark:bg-sky-500 px-4 py-3 font-medium text-white hover:bg-sky-700 dark:hover:bg-sky-600 transition-colors"
         >
           {copy.editInfo}
         </button>
@@ -261,7 +261,7 @@ export default function ProfileForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="profile-form">
       <div>
         <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
           {t('display_name')}
@@ -425,7 +425,7 @@ export default function ProfileForm({
       <button
         type="submit"
         disabled={loading}
-        className="w-full rounded-xl bg-sky-600 dark:bg-sky-500 px-4 py-3 font-medium text-white hover:bg-sky-700 dark:hover:bg-sky-600 disabled:opacity-50 transition-colors btn-press"
+        className="profile-primary-button w-full rounded-xl bg-sky-600 dark:bg-sky-500 px-4 py-3 font-medium text-white hover:bg-sky-700 dark:hover:bg-sky-600 disabled:opacity-50 transition-colors btn-press"
       >
         {loading ? t('saving') : isOnboarding ? copy.finishSetup : t('save')}
       </button>

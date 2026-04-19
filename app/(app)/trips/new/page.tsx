@@ -1,12 +1,15 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import BrandLogo from '@/components/BrandLogo';
 import { getMyCommunities } from '@/lib/services/community';
 import CommunityBadge from '@/components/CommunityBadge';
+import { CommunityIdentityCard } from '@/components/CommunityIdentityCard';
 import CreateTripForm from './CreateTripForm';
 import { getServerI18n } from '@/lib/i18n/server';
 import { getCurrentUser } from '@/lib/auth/session';
 import { getSavedPlaces } from '@/lib/services/savedPlaces';
-import { getMyTripsAsDriver } from '@/lib/services/trip';
+import { getActiveTripCountsForCommunities, getMyTripsAsDriver } from '@/lib/services/trip';
+import { getMeetingPointsForCommunity } from '@/lib/services/meeting-points';
 import { getRouteRequestsForDriver } from '@/lib/services/activation';
 import RouteDemandPanel from './RouteDemandPanel';
 
@@ -61,6 +64,12 @@ const COPY = {
   },
 } as const;
 
+function formatActiveRideCount(lang: keyof typeof COPY, count: number) {
+  if (lang === 'ar') return `${count} رحلات نشطة`;
+  if (lang === 'he') return `${count} נסיעות פעילות`;
+  return `${count} active ${count === 1 ? 'ride' : 'rides'}`;
+}
+
 export default async function NewTripPage({
   searchParams,
 }: {
@@ -72,7 +81,7 @@ export default async function NewTripPage({
   }>;
 }) {
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
-  const { lang } = await getServerI18n();
+  const { lang, t } = await getServerI18n();
   const copy = COPY[lang];
 
   const user = await getCurrentUser();
@@ -102,6 +111,10 @@ export default async function NewTripPage({
     redirect('/community');
   }
 
+  const activeTripCounts = await getActiveTripCountsForCommunities(
+    joinedCommunities.map((community) => community.id)
+  );
+
   const requestedCommunityId = resolvedSearchParams?.community_id;
   const selectedCommunity =
     joinedCommunities.find((community) => community.id === requestedCommunityId) ??
@@ -109,100 +122,130 @@ export default async function NewTripPage({
 
   if (!selectedCommunity) {
     return (
-      <div className="p-4 max-w-lg mx-auto pb-8 space-y-5">
-        <div>
-          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-sky-600 dark:text-sky-400 mb-2">
-            {copy.eyebrow}
-          </p>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{copy.chooseCommunity}</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            {copy.chooseCommunityDesc}
-          </p>
-        </div>
-
-        <div className="space-y-3">
-          {joinedCommunities.map((community) => (
-            <Link
-              key={community.id}
-              href={buildNewTripHref({
-                communityId: community.id,
-                originName: resolvedSearchParams?.originName,
-                destinationName: resolvedSearchParams?.destinationName,
-              })}
-              className="block rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm hover:border-sky-300 dark:hover:border-sky-700 transition-colors"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <CommunityBadge name={community.name} type={community.type} />
-                  {community.description && (
-                    <p className="text-sm text-slate-600 dark:text-slate-300 mt-3">
-                      {community.description}
-                    </p>
-                  )}
-                </div>
-                <span className="text-xs font-semibold text-slate-400 dark:text-slate-500">
-                  {community.role}
-                </span>
+      <div className="journey-workspace space-y-5 py-4">
+        <section className="journey-hero animate-fade-in-up">
+          <div className="journey-hero__content">
+            <div className="space-y-3">
+              <div className="journey-hero__brand">
+                <BrandLogo lang={lang} size="footer" priority />
               </div>
-            </Link>
-          ))}
-        </div>
+              <p className="journey-hero__eyebrow">{copy.eyebrow}</p>
+              <h1 className="journey-hero__title">{copy.chooseCommunity}</h1>
+              <p className="journey-hero__text">{copy.chooseCommunityDesc}</p>
+            </div>
+            <div className="journey-hero__rail">
+              <span>{copy.route}</span>
+              <span>{copy.departure}</span>
+              <span>{copy.seatsPrice}</span>
+            </div>
+          </div>
+        </section>
 
-        <Link
-          href="/app"
-          className="block text-center text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
-        >
-          {copy.backToRides}
-        </Link>
+        <div className="journey-grid">
+          <section className="space-y-3 animate-fade-in-up stagger-1">
+            {joinedCommunities.map((community) => (
+              <CommunityIdentityCard
+                key={community.id}
+                community={community}
+                href={buildNewTripHref({
+                  communityId: community.id,
+                  originName: resolvedSearchParams?.originName,
+                  destinationName: resolvedSearchParams?.destinationName,
+                })}
+                className="community-identity-card--choice"
+                roleLabel={community.role}
+                typeLabel={community.type === 'public' ? t('public_label') : t('verified_label')}
+                activeRideCount={activeTripCounts.get(community.id) ?? 0}
+                activeRideCountLabel={formatActiveRideCount(
+                  lang,
+                  activeTripCounts.get(community.id) ?? 0
+                )}
+              />
+            ))}
+          </section>
+
+          <aside className="journey-panel animate-fade-in-up stagger-2">
+            <p className="mb-2 text-xs font-black text-[var(--primary)]">{copy.ridersSee}</p>
+            <div className="journey-pill-grid">
+              <div className="flex items-center px-3">{copy.route}</div>
+              <div className="flex items-center px-3">{copy.departure}</div>
+              <div className="flex items-center px-3">{copy.seatsPrice}</div>
+            </div>
+            <Link
+              href="/app"
+              className="mt-4 inline-flex min-h-11 items-center text-sm font-black text-[var(--muted-strong)] hover:text-[var(--primary)]"
+            >
+              {copy.backToRides}
+            </Link>
+          </aside>
+        </div>
       </div>
     );
   }
 
   const backHref = `/app?community_id=${encodeURIComponent(selectedCommunity.id)}`;
-  const routeRequests = await getRouteRequestsForDriver({
-    communityId: selectedCommunity.id,
-    originName: resolvedSearchParams?.originName,
-    destinationName: resolvedSearchParams?.destinationName,
-    preferredRequestId: resolvedSearchParams?.request_id,
-    limit: 4,
-  });
+  const [routeRequests, meetingPoints] = await Promise.all([
+    getRouteRequestsForDriver({
+      communityId: selectedCommunity.id,
+      originName: resolvedSearchParams?.originName,
+      destinationName: resolvedSearchParams?.destinationName,
+      preferredRequestId: resolvedSearchParams?.request_id,
+      limit: 4,
+    }),
+    getMeetingPointsForCommunity(selectedCommunity.id),
+  ]);
 
   return (
-    <div className="p-4 max-w-lg mx-auto pb-8">
-      <div className="mb-6">
-        <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-sky-600 dark:text-sky-400 mb-2">
-          {copy.eyebrow}
-        </p>
-        <CommunityBadge name={selectedCommunity.name} type={selectedCommunity.type} />
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white mt-3">{copy.title}</h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-          {copy.heroDesc(selectedCommunity.name)}
-        </p>
-      </div>
-      <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4 mb-5">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">{copy.ridersSee}</p>
-        <div className="grid grid-cols-3 gap-2 text-xs text-slate-600 dark:text-slate-300">
-          <div className="rounded-xl bg-slate-50 dark:bg-slate-800 px-3 py-2">{copy.route}</div>
-          <div className="rounded-xl bg-slate-50 dark:bg-slate-800 px-3 py-2">{copy.departure}</div>
-          <div className="rounded-xl bg-slate-50 dark:bg-slate-800 px-3 py-2">{copy.seatsPrice}</div>
+    <div className="journey-workspace space-y-5 py-4">
+      <section className="journey-hero animate-fade-in-up">
+        <div className="journey-hero__content">
+          <div className="space-y-3">
+            <div className="journey-hero__brand">
+              <BrandLogo lang={lang} size="footer" priority />
+            </div>
+            <p className="journey-hero__eyebrow">{copy.eyebrow}</p>
+            <CommunityBadge name={selectedCommunity.name} type={selectedCommunity.type} />
+            <h1 className="journey-hero__title">{copy.title}</h1>
+            <p className="journey-hero__text">{copy.heroDesc(selectedCommunity.name)}</p>
+          </div>
+          <div className="journey-hero__rail">
+            <span>{copy.route}</span>
+            <span>{copy.departure}</span>
+            <span>{copy.seatsPrice}</span>
+          </div>
         </div>
+      </section>
+
+      <div className="journey-grid">
+        <main className="space-y-5">
+          <RouteDemandPanel
+            communityId={selectedCommunity.id}
+            requests={routeRequests}
+            lang={lang}
+          />
+          <CreateTripForm
+            communityId={selectedCommunity.id}
+            communityName={selectedCommunity.name}
+            communityType={selectedCommunity.type}
+            initialOriginName={resolvedSearchParams?.originName ?? ''}
+            initialDestinationName={resolvedSearchParams?.destinationName ?? ''}
+            backHref={backHref}
+            savedPlaces={savedPlaces}
+            recentRoutes={recentRoutes}
+            meetingPoints={meetingPoints}
+            routeRequestId={resolvedSearchParams?.request_id ?? null}
+          />
+        </main>
+
+        <aside className="journey-panel order-first space-y-3 md:sticky md:top-20 md:order-none">
+          <p className="text-xs font-black text-[var(--primary)]">{copy.ridersSee}</p>
+          <div className="journey-pill-grid">
+            <div className="flex items-center px-3">{copy.route}</div>
+            <div className="flex items-center px-3">{copy.departure}</div>
+            <div className="flex items-center px-3">{copy.seatsPrice}</div>
+          </div>
+        </aside>
       </div>
-      <RouteDemandPanel
-        communityId={selectedCommunity.id}
-        requests={routeRequests}
-        lang={lang}
-      />
-      <CreateTripForm
-        communityId={selectedCommunity.id}
-        communityName={selectedCommunity.name}
-        communityType={selectedCommunity.type}
-        initialOriginName={resolvedSearchParams?.originName ?? ''}
-        initialDestinationName={resolvedSearchParams?.destinationName ?? ''}
-        backHref={backHref}
-        savedPlaces={savedPlaces}
-        recentRoutes={recentRoutes}
-        routeRequestId={resolvedSearchParams?.request_id ?? null}
-      />
     </div>
   );
 }

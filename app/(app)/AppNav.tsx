@@ -2,8 +2,104 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import type { ReactNode } from 'react';
 import BrandLogo from '@/components/BrandLogo';
 import { useTranslation } from '@/lib/i18n/LanguageProvider';
+
+type NavItem = {
+  key: 'home' | 'rides' | 'post' | 'chat' | 'profile';
+  href: string;
+  label: string;
+  mobileLabel: string;
+  ariaLabel: string;
+  icon: ReactNode;
+  emphasis?: boolean;
+};
+
+function HomeIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M3 10.5 12 3l9 7.5" />
+      <path d="M5 9.8V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9.8" />
+      <path d="M9.5 21v-6h5v6" />
+    </svg>
+  );
+}
+
+function RidesIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M5 16h14" />
+      <path d="M6.5 16 8 9.5A2 2 0 0 1 10 8h4a2 2 0 0 1 2 1.5l1.5 6.5" />
+      <path d="M7 19h.01" />
+      <path d="M17 19h.01" />
+      <path d="M4 13h2" />
+      <path d="M18 13h2" />
+    </svg>
+  );
+}
+
+function PostIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 5v14" />
+      <path d="M5 12h14" />
+    </svg>
+  );
+}
+
+function ChatIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M21 14a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z" />
+      <path d="M8 9h8" />
+      <path d="M8 13h5" />
+    </svg>
+  );
+}
+
+function ProfileIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M20 21a8 8 0 0 0-16 0" />
+      <circle cx="12" cy="8" r="4" />
+    </svg>
+  );
+}
+
+function BellIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+      <path d="M13.7 21a2 2 0 0 1-3.4 0" />
+    </svg>
+  );
+}
+
+function isItemActive(pathname: string, item: NavItem) {
+  if (item.key === 'home') {
+    return pathname === '/app' || pathname.startsWith('/search');
+  }
+
+  if (item.key === 'rides') {
+    return (
+      pathname.startsWith('/trips/my-rides') ||
+      (pathname.startsWith('/trips/') &&
+        !pathname.startsWith('/trips/new') &&
+        !pathname.includes('/chat'))
+    );
+  }
+
+  if (item.key === 'post') {
+    return pathname.startsWith('/trips/new');
+  }
+
+  if (item.key === 'chat') {
+    return pathname === '/messages' || pathname.includes('/chat');
+  }
+
+  return pathname.startsWith('/profile');
+}
 
 export default function AppNav() {
   const pathname = usePathname();
@@ -14,103 +110,123 @@ export default function AppNav() {
       : lang === 'he'
         ? 'ניווט ראשי'
         : 'Primary navigation';
+  const alertsLabel = t('notifications_nav');
+  const postMobileLabel =
+    lang === 'ar' ? 'قدّم' : lang === 'he' ? 'הצע' : 'Post';
 
-  const nav = [
+  const navItems: NavItem[] = [
     {
+      key: 'home',
       href: '/app',
       label: t('home'),
-      icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-          <polyline points="9 22 9 12 15 12 15 22" />
-        </svg>
-      ),
+      mobileLabel: t('home'),
+      ariaLabel: t('home'),
+      icon: <HomeIcon />,
     },
     {
+      key: 'rides',
       href: '/trips/my-rides',
       label: t('my_rides'),
-      icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
-          <line x1="4" y1="22" x2="4" y2="15" />
-        </svg>
-      ),
+      mobileLabel: t('my_rides'),
+      ariaLabel: t('my_rides'),
+      icon: <RidesIcon />,
     },
     {
-      href: '/profile',
-      label: t('profile'),
-      icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-          <circle cx="12" cy="7" r="4" />
-        </svg>
-      ),
+      key: 'post',
+      href: '/trips/new',
+      label: t('offer_ride'),
+      mobileLabel: postMobileLabel,
+      ariaLabel: t('offer_ride'),
+      icon: <PostIcon />,
+      emphasis: true,
     },
     {
+      key: 'chat',
       href: '/messages',
       label: t('messages_nav'),
-      icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-        </svg>
-      ),
+      mobileLabel: t('messages_nav'),
+      ariaLabel: t('messages_nav'),
+      icon: <ChatIcon />,
     },
     {
-      href: '/notifications',
-      label: t('notifications_nav'),
-      icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-          <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-        </svg>
-      ),
+      key: 'profile',
+      href: '/profile',
+      label: t('profile'),
+      mobileLabel: t('profile'),
+      ariaLabel: t('profile'),
+      icon: <ProfileIcon />,
     },
   ];
 
-  return (
-    <nav
-      aria-label={navLabel}
-      className="app-nav fixed inset-x-0 top-0 z-50 border-b backdrop-blur-xl animate-slide-down"
-    >
-      <div className="mx-auto flex h-16 max-w-5xl items-center justify-between gap-2 px-2.5 sm:gap-3 sm:px-4">
-        <Link
-          href="/app"
-          className="group flex min-w-0 shrink-0 items-center rounded-lg max-w-[84px] sm:max-w-none"
-          aria-label={t('home')}
-        >
-          <BrandLogo
-            lang={lang}
-            size="nav"
-            className="transition-transform duration-200 group-hover:scale-[1.02]"
-          />
-        </Link>
+  const isAlertsActive = pathname.startsWith('/notifications');
 
-        <div className="flex items-center gap-0.5 sm:gap-1">
-          {nav.map(({ href, label, icon }) => {
-            const active = pathname === href || (href === '/profile' && pathname.startsWith('/profile'));
+  return (
+    <>
+      <header className="app-top-nav fixed inset-x-0 top-0 z-50 border-b backdrop-blur-xl">
+        <div className="app-top-nav__inner">
+          <Link
+            href="/app"
+            className="app-top-nav__brand group"
+            aria-label={t('home')}
+          >
+            <BrandLogo
+              lang={lang}
+              size="nav"
+              className="transition-transform duration-200 group-hover:scale-[1.02]"
+            />
+          </Link>
+
+          <nav aria-label={navLabel} className="app-top-nav__links">
+            {navItems.map((item) => {
+              const active = isItemActive(pathname, item);
+
+              return (
+                <Link
+                  key={item.key}
+                  href={item.href}
+                  aria-label={item.ariaLabel}
+                  aria-current={active ? 'page' : undefined}
+                  className={`app-top-nav__link nav-link ${active ? 'is-active' : ''} ${item.emphasis ? 'is-emphasis' : ''}`}
+                >
+                  <span className="app-nav-icon">{item.icon}</span>
+                  <span>{item.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
+
+          <Link
+            href="/notifications"
+            aria-label={alertsLabel}
+            aria-current={isAlertsActive ? 'page' : undefined}
+            className={`app-top-nav__alert nav-link ${isAlertsActive ? 'is-active' : ''}`}
+          >
+            <span className="app-nav-icon"><BellIcon /></span>
+            <span className="app-top-nav__alert-label">{alertsLabel}</span>
+          </Link>
+        </div>
+      </header>
+
+      <nav aria-label={navLabel} className="app-bottom-nav md:hidden">
+        <div className="app-bottom-nav__inner">
+          {navItems.map((item) => {
+            const active = isItemActive(pathname, item);
+
             return (
               <Link
-                key={href}
-                href={href}
-                aria-label={label}
+                key={item.key}
+                href={item.href}
+                aria-label={item.ariaLabel}
                 aria-current={active ? 'page' : undefined}
-                className={`nav-link relative flex h-9 min-w-9 shrink-0 items-center justify-center gap-1 rounded-lg px-0 py-0 text-sm font-semibold transition-all duration-200 sm:h-auto sm:min-w-[42px] sm:gap-1.5 sm:px-2.5 sm:py-2.5 md:justify-start md:px-3.5 ${active
-                  ? 'bg-[var(--route-ink)] text-white shadow-sm dark:bg-[var(--primary)] dark:text-[var(--route-ink)]'
-                  : 'text-[var(--muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--muted-strong)]'
-                  }`}
+                className={`app-bottom-nav__item nav-link ${active ? 'is-active' : ''} ${item.emphasis ? 'is-emphasis' : ''}`}
               >
-                <span className={`transition-transform duration-200 ${active ? 'scale-110' : ''}`}>
-                  {icon}
-                </span>
-                <span className="hidden md:inline">{label}</span>
-                {active && (
-                  <span className="absolute bottom-1 left-1/2 h-0.5 w-5 -translate-x-1/2 rounded-full bg-[var(--accent)] animate-scale-in" />
-                )}
+                <span className="app-bottom-nav__icon">{item.icon}</span>
+                <span className="app-bottom-nav__label">{item.mobileLabel}</span>
               </Link>
             );
           })}
         </div>
-      </div>
-    </nav>
+      </nav>
+    </>
   );
 }

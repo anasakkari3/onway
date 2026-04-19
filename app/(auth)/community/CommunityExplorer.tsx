@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import CommunityBadge from '@/components/CommunityBadge';
+import { CommunityIdentityCard } from '@/components/CommunityIdentityCard';
 import { useTranslation } from '@/lib/i18n/LanguageProvider';
 import GuideHint from '@/components/GuideHint';
 import { formatLocalizedDateTime } from '@/lib/i18n/locale';
@@ -32,6 +32,7 @@ type ExploreCommunity = CommunityInfo & {
 type Props = {
   joinedCommunities: JoinedCommunity[];
   exploreCommunities: ExploreCommunity[];
+  activeRideCounts?: Record<string, number>;
 };
 
 function describeAccessMode(
@@ -89,6 +90,7 @@ const TRUST_GUIDE_COPY = {
 export default function CommunityExplorer({
   joinedCommunities: initialJoinedCommunities,
   exploreCommunities: initialExploreCommunities,
+  activeRideCounts = {},
 }: Props) {
   const { lang } = useTranslation();
   const copy = COMMUNITY_EXPLORER_COPY[lang] ?? COMMUNITY_EXPLORER_COPY.en;
@@ -100,6 +102,15 @@ export default function CommunityExplorer({
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
+
+  const getActiveRideCount = (communityId: string) => activeRideCounts[communityId] ?? 0;
+
+  const getActiveRideCountLabel = (communityId: string) => {
+    const count = getActiveRideCount(communityId);
+    if (lang === 'ar') return `${count} رحلات نشطة`;
+    if (lang === 'he') return `${count} נסיעות פעילות`;
+    return `${count} active ${count === 1 ? 'ride' : 'rides'}`;
+  };
 
   const joinedCommunityIds = useMemo(
     () => new Set(joinedCommunities.map((community) => community.id)),
@@ -287,6 +298,90 @@ export default function CommunityExplorer({
     router.refresh();
   };
 
+  const renderCommunityAction = (community: ExploreCommunity) => {
+    if (community.membershipState === 'member') {
+      return (
+        <span className="inline-flex min-h-11 items-center rounded-lg bg-emerald-100 px-3 py-2 text-sm font-bold text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300">
+          {copy.joined}
+        </span>
+      );
+    }
+
+    if (community.membershipState === 'pending') {
+      return (
+        <div className="community-identity-card__actions">
+          <span className="inline-flex min-h-11 items-center rounded-lg bg-amber-100 px-3 py-2 text-sm font-bold text-amber-700 dark:bg-amber-900/20 dark:text-amber-300">
+            {copy.requestPending}
+          </span>
+          <button
+            type="button"
+            onClick={() => handleCancelRequest(community.id)}
+            disabled={busyKey === `cancel:${community.id}`}
+            data-testid={`cancel-request-${community.id}`}
+            className="min-h-11 rounded-lg px-3 py-2 text-sm font-semibold text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+          >
+            {busyKey === `cancel:${community.id}` ? copy.removing : copy.cancelRequest}
+          </button>
+        </div>
+      );
+    }
+
+    if (community.membershipState === 'rejected') {
+      return (
+        <div className="community-identity-card__actions">
+          <span className="inline-flex min-h-11 items-center rounded-lg bg-red-100 px-3 py-2 text-sm font-bold text-red-700 dark:bg-red-900/20 dark:text-red-300">
+            {copy.requestDeclined}
+          </span>
+          {community.decisionNote && (
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {copy.adminNote}: {community.decisionNote}
+            </p>
+          )}
+          {community.resolvedAt && (
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {copy.updatedOn} {formatLocalizedDateTime(lang, community.resolvedAt)}
+            </p>
+          )}
+          <button
+            type="button"
+            onClick={() => handleRequest(community.id)}
+            disabled={busyKey === `request:${community.id}`}
+            data-testid={`request-community-${community.id}`}
+            className="min-h-11 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-slate-800 disabled:opacity-50 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
+          >
+            {busyKey === `request:${community.id}` ? copy.sending : copy.requestAgain}
+          </button>
+        </div>
+      );
+    }
+
+    if (community.membership_mode === 'open') {
+      return (
+        <button
+          type="button"
+          onClick={() => handleJoin(community.id)}
+          disabled={busyKey === `join:${community.id}`}
+          data-testid={`join-community-${community.id}`}
+          className="min-h-11 rounded-lg bg-sky-600 px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-sky-700 disabled:opacity-50 dark:bg-sky-500 dark:hover:bg-sky-600"
+        >
+          {busyKey === `join:${community.id}` ? copy.joining : copy.joinCommunity}
+        </button>
+      );
+    }
+
+    return (
+      <button
+        type="button"
+        onClick={() => handleRequest(community.id)}
+        disabled={busyKey === `request:${community.id}`}
+        data-testid={`request-community-${community.id}`}
+        className="min-h-11 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-slate-800 disabled:opacity-50 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
+      >
+        {busyKey === `request:${community.id}` ? copy.sending : copy.requestAccess}
+      </button>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-sky-50 to-slate-50 dark:from-slate-950 dark:to-slate-900 px-4 py-8">
       <div className="max-w-3xl mx-auto space-y-6">
@@ -379,31 +474,16 @@ export default function CommunityExplorer({
           ) : (
             <div className="grid gap-3 mt-4 sm:grid-cols-2">
               {joinedCommunities.map((community) => (
-                <div
+                <CommunityIdentityCard
                   key={community.id}
-                  className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 dark:border-slate-800 dark:bg-slate-950/60"
-                  data-testid={`joined-community-${community.id}`}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <CommunityBadge name={community.name} type={community.type} />
-                      <p className="text-base font-bold text-slate-900 dark:text-slate-100 mt-2">
-                        {community.name}
-                      </p>
-                    </div>
-                    <span className="rounded-full bg-slate-900 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white dark:bg-slate-700">
-                      {community.role === 'admin' ? copy.roleAdmin : copy.roleMember}
-                    </span>
-                  </div>
-                  {community.description && (
-                    <p className="text-sm text-slate-600 dark:text-slate-300 mt-3">
-                      {community.description}
-                    </p>
-                  )}
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-3">
-                    {describeTrust(community, copy)}
-                  </p>
-                </div>
+                  community={community}
+                  roleLabel={community.role === 'admin' ? copy.roleAdmin : copy.roleMember}
+                  accessLabel={describeAccessMode(community, copy)}
+                  trustLabel={describeTrust(community, copy)}
+                  activeRideCount={getActiveRideCount(community.id)}
+                  activeRideCountLabel={getActiveRideCountLabel(community.id)}
+                  testId={`joined-community-${community.id}`}
+                />
               ))}
             </div>
           )}
@@ -421,100 +501,16 @@ export default function CommunityExplorer({
 
           <div className="grid gap-4 mt-4">
             {exploreCommunities.map((community) => (
-              <div
+              <CommunityIdentityCard
                 key={community.id}
-                className="rounded-2xl border border-slate-200 px-4 py-4 dark:border-slate-800"
-                data-testid={`community-card-${community.id}`}
-              >
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="space-y-3 min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <CommunityBadge name={community.name} type={community.type} />
-                      <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:bg-slate-800 dark:text-slate-300">
-                        {describeAccessMode(community, copy)}
-                      </span>
-                    </div>
-                    {community.description && (
-                      <p className="text-sm text-slate-600 dark:text-slate-300">
-                        {community.description}
-                      </p>
-                    )}
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      {describeTrust(community, copy)}
-                    </p>
-                  </div>
-
-                  <div className="sm:text-right">
-                    {community.membershipState === 'member' ? (
-                      <span className="inline-flex rounded-xl bg-emerald-100 px-3 py-2 text-sm font-bold text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300">
-                        {copy.joined}
-                      </span>
-                    ) : community.membershipState === 'pending' ? (
-                      <div className="space-y-2">
-                        <span className="inline-flex rounded-xl bg-amber-100 px-3 py-2 text-sm font-bold text-amber-700 dark:bg-amber-900/20 dark:text-amber-300">
-                          {copy.requestPending}
-                        </span>
-                        <div>
-                      <button
-                        type="button"
-                        onClick={() => handleCancelRequest(community.id)}
-                        disabled={busyKey === `cancel:${community.id}`}
-                        data-testid={`cancel-request-${community.id}`}
-                        className="text-sm font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-                      >
-                            {busyKey === `cancel:${community.id}` ? copy.removing : copy.cancelRequest}
-                          </button>
-                        </div>
-                      </div>
-                    ) : community.membershipState === 'rejected' ? (
-                      <div className="space-y-2 sm:max-w-xs">
-                        <span className="inline-flex rounded-xl bg-red-100 px-3 py-2 text-sm font-bold text-red-700 dark:bg-red-900/20 dark:text-red-300">
-                          {copy.requestDeclined}
-                        </span>
-                        {community.decisionNote && (
-                          <p className="text-xs text-slate-500 dark:text-slate-400">
-                            {copy.adminNote}: {community.decisionNote}
-                          </p>
-                        )}
-                        {community.resolvedAt && (
-                          <p className="text-xs text-slate-500 dark:text-slate-400">
-                            {copy.updatedOn} {formatLocalizedDateTime(lang, community.resolvedAt)}
-                          </p>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => handleRequest(community.id)}
-                          disabled={busyKey === `request:${community.id}`}
-                          data-testid={`request-community-${community.id}`}
-                          className="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white hover:bg-slate-800 disabled:opacity-50 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
-                        >
-                          {busyKey === `request:${community.id}` ? copy.sending : copy.requestAgain}
-                        </button>
-                      </div>
-                    ) : community.membership_mode === 'open' ? (
-                      <button
-                        type="button"
-                        onClick={() => handleJoin(community.id)}
-                        disabled={busyKey === `join:${community.id}`}
-                        data-testid={`join-community-${community.id}`}
-                        className="rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-sky-700 disabled:opacity-50 dark:bg-sky-500 dark:hover:bg-sky-600"
-                      >
-                        {busyKey === `join:${community.id}` ? copy.joining : copy.joinCommunity}
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => handleRequest(community.id)}
-                        disabled={busyKey === `request:${community.id}`}
-                        data-testid={`request-community-${community.id}`}
-                        className="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white hover:bg-slate-800 disabled:opacity-50 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
-                      >
-                        {busyKey === `request:${community.id}` ? copy.sending : copy.requestAccess}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
+                community={community}
+                accessLabel={describeAccessMode(community, copy)}
+                trustLabel={describeTrust(community, copy)}
+                activeRideCount={getActiveRideCount(community.id)}
+                activeRideCountLabel={getActiveRideCountLabel(community.id)}
+                action={renderCommunityAction(community)}
+                testId={`community-card-${community.id}`}
+              />
             ))}
 
             {exploreCommunities.length === 0 && (

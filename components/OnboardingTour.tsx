@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useSyncExternalStore } from 'react';
+import { usePathname } from 'next/navigation';
 import { useTranslation } from '@/lib/i18n/LanguageProvider';
 
 const TOUR_KEY = 'batreeqak_tour_seen_v1';
@@ -107,6 +108,7 @@ const STEPS: Record<'ar' | 'en' | 'he', Step[]> = {
 
 export default function OnboardingTour() {
   const { lang } = useTranslation();
+  const pathname = usePathname();
   const shouldShowTour = useSyncExternalStore(
     subscribeTourState,
     getClientTourSnapshot,
@@ -117,13 +119,14 @@ export default function OnboardingTour() {
 
   const safeKey = (lang === 'ar' || lang === 'he' ? lang : 'en') as 'ar' | 'en' | 'he';
   const steps = STEPS[safeKey];
+  const canShowTourHere = pathname === '/app';
 
   const dismiss = () => {
     try { localStorage.setItem(TOUR_KEY, '1'); } catch { /* noop */ }
     setDismissed(true);
   };
 
-  if (!shouldShowTour || dismissed) return null;
+  if (!canShowTourHere || !shouldShowTour || dismissed) return null;
 
   const current = steps[step];
   const isLast = step === steps.length - 1;

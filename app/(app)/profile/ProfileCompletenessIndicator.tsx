@@ -86,10 +86,12 @@ export default function ProfileCompletenessIndicator({
   ];
 
   const missingFields = fields.filter((field) => !field.complete);
+  const completedFields = fields.length - missingFields.length;
+  const completionPercent = Math.round((completedFields / fields.length) * 100);
 
   return (
     <div
-      className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4 space-y-3"
+      className="profile-completeness space-y-3"
       role="region"
       aria-label={copy.aria}
     >
@@ -105,7 +107,14 @@ export default function ProfileCompletenessIndicator({
         </p>
       </div>
 
-      <ul className="space-y-1.5" aria-label={copy.checklist}>
+      <div className="profile-progress" aria-hidden="true">
+        <div
+          className="profile-progress__bar"
+          style={{ width: `${completionPercent}%` }}
+        />
+      </div>
+
+      <ul className="profile-checklist" aria-label={copy.checklist}>
         {fields.map((field) => (
           <li key={field.label} className="flex items-center gap-2 text-xs">
             <span

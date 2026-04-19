@@ -2,6 +2,7 @@ import DecisionRideCard from '@/components/rides/DecisionRideCard';
 import type {
   CommunityType,
   TripPassengerGenderPreference,
+  TripStatus,
   TrustProfile,
   WeekdayIndex,
 } from '@/lib/types';
@@ -25,6 +26,7 @@ type TripCardTrip = {
   origin_name: string;
   destination_name: string;
   departure_time: string;
+  status?: TripStatus;
   seats_available: number;
   price_cents?: number | null;
   driver?: {
@@ -58,6 +60,12 @@ const FALLBACK = {
   driver: 'Driver',
   view_ride: 'View ride',
 } as const;
+
+const ACTION_COPY: Record<Lang, { viewRide: string }> = {
+  en: { viewRide: 'View ride' },
+  ar: { viewRide: 'عرض الرحلة' },
+  he: { viewRide: 'צפו בנסיעה' },
+};
 
 const PUBLIC_COPY: Record<Lang, string> = {
   en: 'Public community',
@@ -100,7 +108,12 @@ function normalizeLang(lang?: string): Lang {
 export function TripCard(props: { trip: TripCardTrip; t?: (k: string) => string; lang?: string }) {
   const { trip, t, lang = 'en' } = props;
   const activeLang = normalizeLang(lang);
-  const translate = (key: string) => t?.(key) ?? FALLBACK[key as keyof typeof FALLBACK] ?? key;
+  const translate = (key: string) => {
+    const translated = t?.(key);
+    return translated && translated !== key
+      ? translated
+      : FALLBACK[key as keyof typeof FALLBACK] ?? key;
+  };
   const driverName = trip.driver?.display_name || trip.display_name || translate('community_member');
   const avatarUrl = (trip.driver?.avatar_url || trip.avatar_url) ?? undefined;
   const receivedRatingAvg = trip.driver?.rating_avg ?? trip.driver_received_rating_avg;
@@ -112,6 +125,7 @@ export function TripCard(props: { trip: TripCardTrip; t?: (k: string) => string;
     recurring_days: trip.recurring_days,
     recurring_departure_time: trip.recurring_departure_time,
   });
+  const tripStatus = trip.status ?? 'scheduled';
 
   const time = formatLocalizedTime(activeLang, trip.departure_time);
   const date = getRelativeDayLabel(activeLang, trip.departure_time, translate);
@@ -142,12 +156,17 @@ export function TripCard(props: { trip: TripCardTrip; t?: (k: string) => string;
     <DecisionRideCard
       href={`/trips/${trip.id}`}
       className="animate-fade-in-up"
+      locked={trip.seats_available <= 0 && tripStatus !== 'in_progress'}
       ride={{
         id: trip.id,
         origin: trip.origin_name,
         destination: trip.destination_name,
         timeLabel: time,
         dayLabel: isRecurring ? RECURRING_COPY[activeLang].label : date,
+        departureTime: trip.departure_time,
+        status: tripStatus,
+        isRecurring,
+        lang: activeLang,
         seatsAvailable: trip.seats_available,
         seatsLabel: showSeatUrgency ? seatsLabel : seatCountLabel,
         priceLabel: priceDisplay,
@@ -158,7 +177,11 @@ export function TripCard(props: { trip: TripCardTrip; t?: (k: string) => string;
         activityHint,
         urgency: showSeatUrgency ? seatsLabel : null,
         trustLine,
-        actionLabel: translate('view_ride'),
+        driverRatingAvg: receivedRatingAvg ?? 0,
+        driverRatingCount: receivedRatingCount ?? 0,
+        driverCompletedDrives: completedDrives,
+        driverTrustProfile: trip.driver_trust_profile ?? null,
+        actionLabel: ACTION_COPY[activeLang].viewRide,
       }}
     />
   );

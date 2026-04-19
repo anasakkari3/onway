@@ -61,6 +61,10 @@ export type DetailCopy = {
     invalidTripTransition: string;
     startTooEarly: string;
     completeRequiresInProgress: string;
+    confirmationOpensBeforeDeparture: string;
+    confirmationWindowExpired: string;
+    confirmationOnlyPassengers: string;
+    confirmationActiveOnly: string;
     genericBooking: string;
     genericCancel: string;
     genericUpdate: string;
@@ -137,6 +141,10 @@ export const DETAIL_COPY: Record<Lang, DetailCopy> = {
       invalidTripTransition: 'This trip status change is not allowed.',
       startTooEarly: 'You can only start the trip within 30 minutes of departure.',
       completeRequiresInProgress: 'The trip must be in progress before it can be completed.',
+      confirmationOpensBeforeDeparture: 'Readiness confirmation opens 30 minutes before departure.',
+      confirmationWindowExpired: 'The readiness confirmation window has expired.',
+      confirmationOnlyPassengers: 'Only confirmed passengers can confirm readiness.',
+      confirmationActiveOnly: 'Readiness confirmation is only available for active trips.',
       genericBooking: 'Booking failed.',
       genericCancel: 'Cancelling the booking failed.',
       genericUpdate: 'Updating the trip failed.',
@@ -210,6 +218,10 @@ export const DETAIL_COPY: Record<Lang, DetailCopy> = {
       invalidTripTransition: 'لا يمكن تغيير حالة هذه الرحلة بهذه الطريقة.',
       startTooEarly: 'يمكنك بدء الرحلة فقط خلال 30 دقيقة من موعد الانطلاق.',
       completeRequiresInProgress: 'يجب أن تكون الرحلة قيد التنفيذ قبل تعليمها كمكتملة.',
+      confirmationOpensBeforeDeparture: 'يفتح تأكيد الجاهزية قبل الانطلاق بـ 30 دقيقة.',
+      confirmationWindowExpired: 'انتهت مهلة تأكيد الجاهزية.',
+      confirmationOnlyPassengers: 'يمكن للركاب المؤكدين فقط تأكيد الجاهزية.',
+      confirmationActiveOnly: 'تأكيد الجاهزية متاح فقط للرحلات النشطة.',
       genericBooking: 'فشل الحجز.',
       genericCancel: 'فشل إلغاء الحجز.',
       genericUpdate: 'فشل تحديث الرحلة.',
@@ -283,6 +295,10 @@ export const DETAIL_COPY: Record<Lang, DetailCopy> = {
       invalidTripTransition: 'אי אפשר לשנות את סטטוס הנסיעה בצורה הזאת.',
       startTooEarly: 'אפשר להתחיל את הנסיעה רק בתוך 30 דקות מזמן היציאה.',
       completeRequiresInProgress: 'הנסיעה חייבת להיות בתהליך לפני שאפשר להשלים אותה.',
+      confirmationOpensBeforeDeparture: 'אישור המוכנות נפתח 30 דקות לפני היציאה.',
+      confirmationWindowExpired: 'חלון אישור המוכנות נסגר.',
+      confirmationOnlyPassengers: 'רק נוסעים מאושרים יכולים לאשר מוכנות.',
+      confirmationActiveOnly: 'אישור מוכנות זמין רק לנסיעות פעילות.',
       genericBooking: 'ההזמנה נכשלה.',
       genericCancel: 'ביטול ההזמנה נכשל.',
       genericUpdate: 'עדכון הנסיעה נכשל.',
@@ -329,6 +345,18 @@ export function localizeTripActionError(message: string, lang: Lang) {
   }
   if (normalized.includes('trip must be in progress before it can be completed')) {
     return copy.errors.completeRequiresInProgress;
+  }
+  if (normalized.includes('confirmation opens 30 minutes before departure')) {
+    return copy.errors.confirmationOpensBeforeDeparture;
+  }
+  if (normalized.includes('confirmation window expired')) {
+    return copy.errors.confirmationWindowExpired;
+  }
+  if (normalized.includes('only confirmed passengers can confirm readiness')) {
+    return copy.errors.confirmationOnlyPassengers;
+  }
+  if (normalized.includes('pre-departure confirmation is only available for active trips')) {
+    return copy.errors.confirmationActiveOnly;
   }
   if (normalized === 'booking failed') return copy.errors.genericBooking;
   if (normalized === 'cancel failed') return copy.errors.genericCancel;

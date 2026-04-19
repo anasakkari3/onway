@@ -5,12 +5,14 @@ import { getMyCommunities } from '@/lib/services/community';
 import { getUserProfile, getMyProfileFull } from '@/lib/services/user';
 import { getSavedPlaces } from '@/lib/services/savedPlaces';
 import {
+  getActiveTripCountsForCommunities,
   getMyTripsAsDriver,
   getMyBookings,
   getUpcomingTripsForCommunities,
 } from '@/lib/services/trip';
 import CommunityBadge from '@/components/CommunityBadge';
 import EmptyStateCard from '@/components/EmptyStateCard';
+import BrandLogo from '@/components/BrandLogo';
 import PwaInstallPrompt from '../PwaInstallPrompt';
 import InlineSearch from '../InlineSearch';
 import SearchResults from './SearchResults';
@@ -65,6 +67,7 @@ const COPY = {
     scopeMixed: 'Your feed is mixed right now. Pick one community to search or offer a ride there.',
     scopeSingle: 'You only have one community, so actions stay scoped automatically.',
     allJoined: 'All joined',
+    activeRideCount: (count: number) => `${count} active ${count === 1 ? 'ride' : 'rides'}`,
     findRide: 'Find a ride',
     chooseCommunityToSearch: 'Choose a community to search',
     chooseCommunityToSearchDesc: 'Search results stay inside one community. Pick the community above, then run the route search there.',
@@ -92,6 +95,7 @@ const COPY = {
     scopeMixed: 'الخلاصة الآن مختلطة. اختر مجتمعًا واحدًا للبحث أو لعرض رحلة بداخله.',
     scopeSingle: 'لديك مجتمع واحد فقط، لذلك يبقى كل شيء ضمن النطاق الصحيح تلقائيًا.',
     allJoined: 'الكل',
+    activeRideCount: (count: number) => `${count} رحلات نشطة`,
     findRide: 'ابحث عن رحلة',
     chooseCommunityToSearch: 'اختر مجتمعًا للبحث',
     chooseCommunityToSearchDesc: 'نتائج البحث تبقى داخل مجتمع واحد. اختر المجتمع من الأعلى ثم نفّذ البحث هناك.',
@@ -119,6 +123,7 @@ const COPY = {
     scopeMixed: 'כרגע הפיד מעורב. בחרו קהילה אחת כדי לחפש או להציע נסיעה בתוכה.',
     scopeSingle: 'יש לכם רק קהילה אחת, לכן הפעולות נשארות בתחום הנכון באופן אוטומטי.',
     allJoined: 'הכול',
+    activeRideCount: (count: number) => `${count} נסיעות פעילות`,
     findRide: 'מצאו נסיעה',
     chooseCommunityToSearch: 'בחרו קהילה לחיפוש',
     chooseCommunityToSearchDesc: 'תוצאות החיפוש נשארות בתוך קהילה אחת. בחרו את הקהילה למעלה ואז חפשו בתוכה.',
@@ -180,14 +185,22 @@ export default async function HomePage(props: {
   let myTrips: Awaited<ReturnType<typeof getMyTripsAsDriver>> = [];
   let myBookings: Awaited<ReturnType<typeof getMyBookings>> = [];
   let feedTrips: Awaited<ReturnType<typeof getUpcomingTripsForCommunities>> = [];
+  let activeTripCounts = new Map<string, number>();
 
   if (user) {
     try {
-      [myTrips, myBookings] = await Promise.all([getMyTripsAsDriver(), getMyBookings()]);
-      if (feedCommunityIds.length > 0) {
-        feedTrips = await getUpcomingTripsForCommunities(feedCommunityIds, 8);
-        feedTrips = feedTrips.filter((trip) => trip.driver_id !== user.id);
-      }
+      const [driverTrips, bookings, upcomingTrips, communityCounts] = await Promise.all([
+        getMyTripsAsDriver(),
+        getMyBookings(),
+        feedCommunityIds.length > 0
+          ? getUpcomingTripsForCommunities(feedCommunityIds, 8)
+          : Promise.resolve([]),
+        getActiveTripCountsForCommunities(joinedCommunities.map((community) => community.id)),
+      ]);
+      myTrips = driverTrips;
+      myBookings = bookings;
+      feedTrips = upcomingTrips.filter((trip) => trip.driver_id !== user.id);
+      activeTripCounts = communityCounts;
     } catch {
       // non-critical
     }
@@ -218,6 +231,7 @@ export default async function HomePage(props: {
       : joinedCommunities[0]?.name ?? t('welcome_to_ride_match');
   const communitySwitcherItems = joinedCommunities.map((community) => ({
     ...community,
+    activeRideCount: activeTripCounts.get(community.id) ?? 0,
     href: buildAppHref({
       communityId: community.id,
       originName: isSearchActive ? originQuery : undefined,
@@ -230,6 +244,10 @@ export default async function HomePage(props: {
     : hasMultipleCommunities
       ? copy.scopeMixed
       : copy.scopeSingle;
+  const allActiveRideCount = joinedCommunities.reduce(
+    (total, community) => total + (activeTripCounts.get(community.id) ?? 0),
+    0
+  );
   const heroTitle = isSearchActive
     ? t('finding_ride')
     : firstName
@@ -237,11 +255,14 @@ export default async function HomePage(props: {
       : t('welcome_to_ride_match');
 
   return (
-    <div className="pb-10 space-y-7">
+    <div className="booking-page space-y-7">
       <PwaInstallPrompt />
 
       <div className="app-hero relative pt-8 pb-16 px-4 -mt-16 w-full max-w-2xl mx-auto overflow-hidden rounded-b-lg">
         <div className="relative z-10 pt-16 animate-fade-in-up">
+          <div className="journey-hero__brand mb-4">
+            <BrandLogo lang={lang} size="footer" priority />
+          </div>
           <p className="mb-3 inline-flex rounded-lg border border-white/15 bg-white/10 px-2.5 py-1 text-xs font-bold text-white/80 backdrop-blur" dir="auto">
             {heroScopeLabel}
           </p>
@@ -270,6 +291,11 @@ export default async function HomePage(props: {
               selectedCommunityId={selectedCommunity?.id ?? null}
               showAllOption={hasMultipleCommunities}
               allHref={buildAppHref()}
+              allRideCount={allActiveRideCount}
+              activeRideCountLabel={copy.activeRideCount}
+              typeLabel={(community) =>
+                community.type === 'public' ? t('public_label') : t('verified_label')
+              }
               title={copy.scopeTitle}
               description={communitySwitcherDescription}
               allLabel={copy.allJoined}
@@ -404,7 +430,7 @@ export default async function HomePage(props: {
                     {myBookings.slice(0, 2).map((trip) => {
                       const statusUi = getTripStatusPresentationWithTranslation(trip, (key) => t(key));
                       return (
-                        <Link key={trip.id} href={`/trips/${trip.id}`} className="route-card card-hover block rounded-lg p-4">
+                        <Link key={trip.id} href={`/trips/${trip.id}`} className={`route-card card-hover block rounded-lg p-4 ${statusUi.cardClassName}`}>
                           <div className="flex items-center gap-3">
                             <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg text-xl ${statusUi.accentClassName}`}>T</div>
                             <div className="flex-1 min-w-0">
@@ -434,7 +460,7 @@ export default async function HomePage(props: {
                     {myTrips.slice(0, 2).map((trip) => {
                       const statusUi = getTripStatusPresentationWithTranslation(trip, (key) => t(key));
                       return (
-                        <Link key={trip.id} href={`/trips/${trip.id}`} className="route-card card-hover block rounded-lg p-4">
+                        <Link key={trip.id} href={`/trips/${trip.id}`} className={`route-card card-hover block rounded-lg p-4 ${statusUi.cardClassName}`}>
                           <div className="flex items-center gap-3">
                             <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg text-xl ${statusUi.accentClassName}`}>C</div>
                             <div className="flex-1 min-w-0">

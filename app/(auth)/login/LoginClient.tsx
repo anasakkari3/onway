@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Suspense, useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { FirebaseError } from 'firebase/app';
 import {
@@ -68,8 +68,6 @@ type ScreenCopy = {
   weakPassword: string;
   emailRequired: string;
   passwordRequired: string;
-  trustTitle: string;
-  trustBullets: string[];
   privacyNote: string;
   terms: string;
   privacy: string;
@@ -124,12 +122,6 @@ const COPY: Record<SupportedLang, ScreenCopy> = {
     weakPassword: 'Choose a stronger password.',
     emailRequired: 'Enter your email.',
     passwordRequired: 'Enter your password.',
-    trustTitle: 'Before launch checklist',
-    trustBullets: [
-      'Returning users log in directly with email and password.',
-      'New users verify their email once before filling profile details.',
-      'Forgot password is handled by Firebase securely.',
-    ],
     privacyNote: 'By continuing you agree to our ',
     terms: 'Terms',
     privacy: 'Privacy Policy',
@@ -141,6 +133,8 @@ const COPY: Record<SupportedLang, ScreenCopy> = {
       'auth/email-already-in-use': 'This email already has an account. Log in instead.',
       'auth/too-many-requests': 'Too many attempts. Try again later.',
       'auth/network-request-failed': 'Network error. Check your connection.',
+      'auth/popup-blocked': 'Allow the Google window, then try again.',
+      'auth/cancelled-popup-request': 'A Google window is already opening. Continue there or try again.',
       EMAIL_NOT_VERIFIED: 'Please verify your email before entering the app.',
     },
   },
@@ -191,12 +185,6 @@ const COPY: Record<SupportedLang, ScreenCopy> = {
     weakPassword: 'اختر كلمة مرور أقوى.',
     emailRequired: 'أدخل بريدك الإلكتروني.',
     passwordRequired: 'أدخل كلمة المرور.',
-    trustTitle: 'جاهز للتجربة الأولى',
-    trustBullets: [
-      'المستخدم المسجل يدخل مباشرة بالبريد وكلمة المرور.',
-      'المستخدم الجديد يتحقق من بريده مرة واحدة قبل تعبئة بياناته.',
-      'نسيت كلمة المرور مرتبطة مباشرة بـ Firebase.',
-    ],
     privacyNote: 'بالمتابعة أنت توافق على ',
     terms: 'الشروط',
     privacy: 'سياسة الخصوصية',
@@ -208,6 +196,8 @@ const COPY: Record<SupportedLang, ScreenCopy> = {
       'auth/email-already-in-use': 'يوجد حساب بهذا البريد. سجّل دخول بدلًا من إنشاء حساب جديد.',
       'auth/too-many-requests': 'محاولات كثيرة. جرّب لاحقًا.',
       'auth/network-request-failed': 'مشكلة اتصال. تحقق من الإنترنت.',
+      'auth/popup-blocked': 'اسمح بفتح نافذة Google ثم جرّب مرة أخرى.',
+      'auth/cancelled-popup-request': 'نافذة Google قيد الفتح. أكمل هناك أو جرّب مرة أخرى.',
       EMAIL_NOT_VERIFIED: 'تحقق من بريدك قبل دخول التطبيق.',
     },
   },
@@ -258,12 +248,6 @@ const COPY: Record<SupportedLang, ScreenCopy> = {
     weakPassword: 'בחרו סיסמה חזקה יותר.',
     emailRequired: 'הכניסו אימייל.',
     passwordRequired: 'הכניסו סיסמה.',
-    trustTitle: 'מוכן לניסוי הראשון',
-    trustBullets: [
-      'משתמשים חוזרים נכנסים ישירות עם אימייל וסיסמה.',
-      'משתמש חדש מאמת אימייל פעם אחת לפני מילוי פרופיל.',
-      'איפוס סיסמה מנוהל בצורה מאובטחת דרך Firebase.',
-    ],
     privacyNote: 'בהמשך אתם מסכימים ל',
     terms: 'תנאים',
     privacy: 'מדיניות פרטיות',
@@ -275,6 +259,8 @@ const COPY: Record<SupportedLang, ScreenCopy> = {
       'auth/email-already-in-use': 'כבר קיים חשבון לאימייל הזה. התחברו במקום.',
       'auth/too-many-requests': 'יותר מדי ניסיונות. נסו מאוחר יותר.',
       'auth/network-request-failed': 'שגיאת רשת. בדקו חיבור.',
+      'auth/popup-blocked': 'אפשרו את חלון Google ואז נסו שוב.',
+      'auth/cancelled-popup-request': 'חלון Google כבר נפתח. המשיכו שם או נסו שוב.',
       EMAIL_NOT_VERIFIED: 'יש לאמת את האימייל לפני הכניסה לאפליקציה.',
     },
   },
@@ -336,6 +322,8 @@ function LoginContent() {
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [googleAuthReady, setGoogleAuthReady] = useState(false);
+  const googlePopupInFlight = useRef(false);
 
   const passwordRuleStatus = PASSWORD_TESTS.map((test) => test(password));
   const canSubmitSignup = passwordRuleStatus.every(Boolean) && password === confirmPassword;
@@ -399,6 +387,24 @@ function LoginContent() {
   };
 
   useEffect(() => {
+    let cancelled = false;
+    const auth = getFirebaseAuth();
+
+    setGoogleAuthReady(false);
+    void setPersistence(auth, remember ? browserLocalPersistence : browserSessionPersistence)
+      .catch(() => undefined)
+      .finally(() => {
+        if (!cancelled) {
+          setGoogleAuthReady(true);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [remember]);
+
+  useEffect(() => {
     setMode(requestedMode);
   }, [requestedMode]);
 
@@ -442,23 +448,30 @@ function LoginContent() {
   };
 
   const handleGoogleAuth = async () => {
+    if (googlePopupInFlight.current || !googleAuthReady) return;
+
+    googlePopupInFlight.current = true;
     resetMessages();
     setLoading(true);
 
     try {
       const auth = getFirebaseAuth();
-      await setPersistence(auth, remember ? browserLocalPersistence : browserSessionPersistence);
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: 'select_account' });
       const credential = await signInWithPopup(auth, provider);
       await finishAuth(credential.user);
     } catch (authError) {
-      if (authError instanceof FirebaseError && authError.code === 'auth/popup-closed-by-user') {
+      if (
+        authError instanceof FirebaseError &&
+        (authError.code === 'auth/popup-closed-by-user' ||
+          authError.code === 'auth/cancelled-popup-request')
+      ) {
         setNotice(copy.googleCancelled);
       } else {
         setError(getFirebaseAuthError(authError, copy));
       }
     } finally {
+      googlePopupInFlight.current = false;
       setLoading(false);
     }
   };
@@ -591,7 +604,7 @@ function LoginContent() {
           <button
             type="button"
             onClick={handleGoogleAuth}
-            disabled={loading}
+            disabled={loading || !googleAuthReady}
             className="auth-google"
           >
             <span aria-hidden="true">G</span>
@@ -797,19 +810,6 @@ function LoginContent() {
               </button>
             </div>
           )}
-
-          <div className="auth-trust-checklist mt-6 rounded-lg border border-[var(--border-soft)] bg-[var(--surface-raised)] px-4 py-4">
-            <p className="text-xs font-black text-[var(--primary)]">
-              {copy.trustTitle}
-            </p>
-            <ul className="mt-2 space-y-1.5">
-              {copy.trustBullets.map((bullet) => (
-                <li key={bullet} className="text-sm text-[var(--muted-strong)]">
-                  - {bullet}
-                </li>
-              ))}
-            </ul>
-          </div>
 
           <Link href="/preview" className="auth-continue">
             {copy.continueBrowsing}

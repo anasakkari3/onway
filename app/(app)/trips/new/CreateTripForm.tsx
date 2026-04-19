@@ -8,6 +8,7 @@ import CommunityBadge from '@/components/CommunityBadge';
 import GuideHint from '@/components/GuideHint';
 import SavedPlaceChips from '@/components/SavedPlaceChips';
 import type { SavedPlace } from '@/lib/services/savedPlaces';
+import { CUSTOM_MEETING_POINT_ID, type MeetingPointOption } from '@/lib/trips/meeting-points';
 import type {
   CommunityType,
   TripPassengerGenderPreference,
@@ -40,6 +41,7 @@ type Props = {
   backHref?: string;
   savedPlaces?: SavedPlace[];
   recentRoutes?: RecentRoute[];
+  meetingPoints?: MeetingPointOption[];
   routeRequestId?: string | null;
 };
 
@@ -52,6 +54,24 @@ function getMinDatetime(): string {
 
 // Weekday order for display: Mon-Fri-Sat-Sun (Mon-first for usability)
 const WEEKDAY_DISPLAY_ORDER: WeekdayIndex[] = [1, 2, 3, 4, 5, 6, 0];
+
+type OriginMode = 'trusted' | 'custom';
+
+function normalizeWaypointText(value: string) {
+  return value.trim().toLocaleLowerCase();
+}
+
+function findMeetingPointByName(points: MeetingPointOption[], name: string) {
+  const normalizedName = normalizeWaypointText(name);
+  if (!normalizedName) return null;
+  return (
+    points.find((point) => normalizeWaypointText(point.label) === normalizedName) ?? null
+  );
+}
+
+function hasCoordinates(point: MeetingPointOption) {
+  return point.lat != null && point.lng != null;
+}
 
 const COPY = {
   en: {
@@ -218,6 +238,42 @@ const COPY = {
     allRequired: 'אנא מלאו את כל שדות החובה.',
     failedCreate: 'יצירת הנסיעה נכשלה. נסו שוב.',
     weekdays: { 0: 'ראש', 1: 'שני', 2: 'שלי', 3: 'רביע', 4: 'חמי', 5: 'שיש', 6: 'שבת' } as Record<WeekdayIndex, string>,
+  },
+} as const;
+
+const MEETING_POINT_COPY = {
+  en: {
+    trustedPickupPoint: 'Trusted pickup point',
+    pickupPointHelper: 'Pick a known community meetup first. Use custom only when the pickup is unusual.',
+    trustedWaypoint: 'Trusted',
+    customPickup: 'Custom pickup',
+    customPickupHelper: 'Use a short, recognizable description so riders can find you quickly.',
+    useCustomPickup: 'Use custom pickup',
+    chooseTrustedPickup: 'Choose trusted pickup',
+    customPickupPlaceholder: 'e.g. North gate by the bus stop',
+    coordinatesSaved: 'Map-ready',
+  },
+  ar: {
+    trustedPickupPoint: 'نقطة لقاء موثوقة',
+    pickupPointHelper: 'اختر نقطة معروفة في المجتمع أولا. استخدم الخيار المخصص فقط عند الحاجة.',
+    trustedWaypoint: 'موثوقة',
+    customPickup: 'نقطة مخصصة',
+    customPickupHelper: 'اكتب وصفا قصيرا وواضحا حتى يجدك الركاب بسرعة.',
+    useCustomPickup: 'استخدم نقطة مخصصة',
+    chooseTrustedPickup: 'اختر نقطة موثوقة',
+    customPickupPlaceholder: 'مثال: البوابة الشمالية عند محطة الحافلة',
+    coordinatesSaved: 'جاهزة للخريطة',
+  },
+  he: {
+    trustedPickupPoint: 'נקודת מפגש מוכרת',
+    pickupPointHelper: 'בחרו קודם נקודת מפגש קהילתית. השתמשו בהתאמה אישית רק כשצריך.',
+    trustedWaypoint: 'מהימן',
+    customPickup: 'איסוף מותאם',
+    customPickupHelper: 'כתבו תיאור קצר וברור כדי שהנוסעים ימצאו אתכם מהר.',
+    useCustomPickup: 'השתמשו בנקודה מותאמת',
+    chooseTrustedPickup: 'בחרו נקודה מוכרת',
+    customPickupPlaceholder: 'לדוגמה: השער הצפוני ליד תחנת האוטובוס',
+    coordinatesSaved: 'מוכן למפה',
   },
 } as const;
 
@@ -402,6 +458,26 @@ function localizeCreateTripError(message: string, lang: keyof typeof COPY) {
   const staticResult = (map[lang] as Record<string, string>)[normalized];
   if (staticResult) return staticResult;
 
+  const meetingPointMessages: Record<keyof typeof COPY, Record<string, string>> = {
+    en: {
+      'Custom meeting point is required': 'Choose a trusted pickup point or enter a custom pickup.',
+      'Meeting point is too long': 'Keep the custom pickup point shorter.',
+      'Meeting point is not available for this community': 'This pickup point is not available in this community.',
+    },
+    ar: {
+      'Custom meeting point is required': 'اختر نقطة لقاء موثوقة أو اكتب نقطة مخصصة.',
+      'Meeting point is too long': 'اجعل وصف نقطة اللقاء أقصر.',
+      'Meeting point is not available for this community': 'نقطة اللقاء هذه غير متاحة في هذا المجتمع.',
+    },
+    he: {
+      'Custom meeting point is required': 'בחרו נקודת מפגש מוכרת או כתבו נקודת איסוף מותאמת.',
+      'Meeting point is too long': 'קצרו את תיאור נקודת המפגש.',
+      'Meeting point is not available for this community': 'נקודת המפגש הזו אינה זמינה בקהילה הזו.',
+    },
+  };
+  const meetingPointResult = meetingPointMessages[lang][normalized];
+  if (meetingPointResult) return meetingPointResult;
+
   // Arabic-only: handle dynamic server error messages
   if (lang === 'ar') {
     if (normalized.includes('driver-ready profile') || normalized.includes('Missing or incomplete')) {
@@ -431,12 +507,22 @@ export default function CreateTripForm({
   backHref = '/app',
   savedPlaces = [],
   recentRoutes = [],
+  meetingPoints = [],
   routeRequestId = null,
 }: Props) {
   const router = useRouter();
   const { t, lang } = useTranslation();
   const copy = COPY[lang];
   const trustCopy = TRUST_COPY[lang];
+  const pickupCopy = MEETING_POINT_COPY[lang];
+  const initialTrustedMeetingPoint = findMeetingPointByName(meetingPoints, initialOriginName);
+  const hasTrustedMeetingPoints = meetingPoints.length > 0;
+  const initialOriginMode: OriginMode =
+    initialTrustedMeetingPoint || (!initialOriginName.trim() && hasTrustedMeetingPoints)
+      ? 'trusted'
+      : 'custom';
+  const initialMeetingPointId =
+    initialTrustedMeetingPoint?.id ?? meetingPoints[0]?.id ?? CUSTOM_MEETING_POINT_ID;
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -446,7 +532,11 @@ export default function CreateTripForm({
   const [tripMode, setTripMode] = useState<'one_time' | 'recurring'>('one_time');
 
   // Route
-  const [originName, setOriginName] = useState(initialOriginName);
+  const [originMode, setOriginMode] = useState<OriginMode>(initialOriginMode);
+  const [originMeetingPointId, setOriginMeetingPointId] = useState(initialMeetingPointId);
+  const [originName, setOriginName] = useState(
+    initialOriginMode === 'custom' ? initialOriginName : ''
+  );
   const [destinationName, setDestinationName] = useState(initialDestinationName);
 
   // One-time departure
@@ -482,9 +572,13 @@ export default function CreateTripForm({
 
   const minDatetime = getMinDatetime();
   const selectedRules = sanitizeTripRulePresetKeys(selectedRuleKeys);
+  const selectedMeetingPoint =
+    meetingPoints.find((point) => point.id === originMeetingPointId) ?? meetingPoints[0] ?? null;
+  const effectiveOriginName =
+    originMode === 'trusted' ? selectedMeetingPoint?.label ?? '' : originName.trim();
 
   // Validation
-  const originError = touched.origin && !originName.trim() ? copy.required : null;
+  const originError = touched.origin && !effectiveOriginName ? copy.required : null;
   const destinationError = touched.destination && !destinationName.trim() ? copy.required : null;
   const timeError = touched.time && tripMode === 'one_time' && !departureTime ? copy.required : null;
   const vehicleError = touched.vehicle && !vehicleMakeModel.trim() ? copy.required : null;
@@ -497,8 +591,8 @@ export default function CreateTripForm({
 
   // Preview values
   const routePreview =
-    originName.trim() && destinationName.trim()
-      ? `${originName.trim()} → ${destinationName.trim()}`
+    effectiveOriginName && destinationName.trim()
+      ? `${effectiveOriginName} → ${destinationName.trim()}`
       : copy.routePlaceholder;
   const vehiclePreview =
     [vehicleMakeModel.trim(), vehicleColor.trim()].filter(Boolean).join(' · ') ||
@@ -530,6 +624,33 @@ export default function CreateTripForm({
     );
   };
 
+  const markOriginTouched = () => {
+    setTouched((prev) => ({ ...prev, origin: true }));
+  };
+
+  const selectTrustedMeetingPoint = (point: MeetingPointOption) => {
+    setOriginMode('trusted');
+    setOriginMeetingPointId(point.id);
+    setOriginName('');
+    markOriginTouched();
+  };
+
+  const selectCustomOrigin = (name = '') => {
+    setOriginMode('custom');
+    setOriginMeetingPointId(CUSTOM_MEETING_POINT_ID);
+    setOriginName(name);
+    markOriginTouched();
+  };
+
+  const applyOriginText = (name: string) => {
+    const matchingMeetingPoint = findMeetingPointByName(meetingPoints, name);
+    if (matchingMeetingPoint) {
+      selectTrustedMeetingPoint(matchingMeetingPoint);
+      return;
+    }
+    selectCustomOrigin(name);
+  };
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
@@ -546,7 +667,7 @@ export default function CreateTripForm({
     const isRecurring = tripMode === 'recurring';
 
     // Validate
-    if (!originName.trim() || !destinationName.trim() || !vehicleMakeModel.trim()) {
+    if (!effectiveOriginName || !destinationName.trim() || !vehicleMakeModel.trim()) {
       setError(copy.allRequired);
       return;
     }
@@ -585,9 +706,12 @@ export default function CreateTripForm({
 
       const trip = await createTrip({
         communityId,
-        // Geocoding not implemented yet — coordinates omitted (stored as null in Firestore).
-        // Replace with real lat/lng once geocoding is added.
-        originName: originName.trim(),
+        // Trusted meeting points resolve server-side to stable community pickup metadata.
+        originMeetingPointId:
+          originMode === 'trusted' && selectedMeetingPoint
+            ? selectedMeetingPoint.id
+            : CUSTOM_MEETING_POINT_ID,
+        originName: effectiveOriginName,
         destinationName: destinationName.trim(),
         vehicleMakeModel: vehicleMakeModel.trim(),
         vehicleColor: vehicleColor.trim() || null,
@@ -635,7 +759,7 @@ export default function CreateTripForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+    <form onSubmit={handleSubmit} className="create-trip-form" noValidate>
       <GuideHint text={copy.formGuide} dismissible />
 
       {/* Community context */}
@@ -643,42 +767,48 @@ export default function CreateTripForm({
         <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">{copy.postingIn}</p>
         <CommunityBadge name={communityName} type={communityType} />
         {communityType === 'public' && (
-          <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">{copy.publicWarning}</p>
+          <GuideHint text={copy.publicWarning} variant="warning" className="mt-3" />
         )}
       </div>
 
       {/* Before you publish */}
-      <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 p-4">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">{copy.beforePublish}</p>
-        <ul className="space-y-1 text-sm text-slate-600 dark:text-slate-300">
-          {copy.beforePublishBullets.map((bullet) => (
-            <li key={bullet}>{bullet}</li>
-          ))}
-        </ul>
-        <div className="mt-3 rounded-xl border border-sky-100 bg-white px-3 py-3 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300">
-          {trustCopy.priceDisputeNote}
+      <div className="notice-card notice-card--calm">
+        <span className="notice-card__icon" aria-hidden="true">?</span>
+        <div className="notice-card__content">
+          <p className="notice-card__title">{copy.beforePublish}</p>
+          <ol className="notice-card__list">
+            {copy.beforePublishBullets.map((bullet, index) => (
+              <li key={bullet} className="notice-card__item">
+                <span className="notice-card__step">{index + 1}</span>
+                <span>{bullet}</span>
+              </li>
+            ))}
+          </ol>
+          <div className="notice-card__meta rounded-lg border border-[var(--border-soft)] bg-[var(--surface)] px-3 py-3">
+            {trustCopy.priceDisputeNote}
+          </div>
+          <Link
+            href="/profile"
+            className="notice-card__action"
+          >
+            {copy.reviewProfile}
+          </Link>
         </div>
-        <Link
-          href="/profile"
-          className="inline-flex mt-3 text-sm font-medium text-sky-700 dark:text-sky-300 hover:text-sky-800 dark:hover:text-sky-200"
-        >
-          {copy.reviewProfile}
-        </Link>
       </div>
 
       {/* Repeat previous route — shown when both fields empty and user has recent routes */}
-      {recentRoutes.length > 0 && !originName.trim() && !destinationName.trim() && (
+      {recentRoutes.length > 0 && !effectiveOriginName && !destinationName.trim() && (
         <div className="space-y-1.5">
           <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest px-1">
             ↻ {copy.repeatRoute}
           </p>
           <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-            {recentRoutes.map((route, i) => (
+            {recentRoutes.map((route) => (
               <button
-                key={i}
+                key={`${route.origin}__${route.destination}`}
                 type="button"
                 onClick={() => {
-                  setOriginName(route.origin);
+                  applyOriginText(route.origin);
                   setDestinationName(route.destination);
                 }}
                 className="shrink-0 flex items-center gap-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 rounded-2xl text-sm font-medium text-slate-700 dark:text-slate-200 hover:border-sky-400 hover:text-sky-600 dark:hover:border-sky-500 dark:hover:text-sky-300 transition-colors shadow-sm"
@@ -694,33 +824,115 @@ export default function CreateTripForm({
 
       {/* Route */}
       <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 overflow-hidden">
-        <div className="px-4 pt-4 pb-2">
-          <label htmlFor="origin" className="block text-[10px] font-bold text-sky-600 dark:text-sky-400 uppercase tracking-widest mb-1">
-            {copy.startingPoint} <span className="text-red-400 ml-0.5">*</span>
-          </label>
-          <input
-            id="origin"
-            type="text"
-            value={originName}
-            onChange={(event) => setOriginName(event.target.value)}
-            onBlur={() => setTouched((prev) => ({ ...prev, origin: true }))}
-            placeholder={copy.startingPlaceholder}
-            className="w-full bg-transparent text-[15px] font-medium text-slate-900 dark:text-slate-100 placeholder-slate-300 dark:placeholder-slate-600 focus:outline-none"
-            autoComplete="off"
-          />
-          {originError && <p className="text-[10px] text-red-500 mt-1">{originError}</p>}
-        </div>
-        {/* Origin saved place chips */}
-        {savedPlaces.length > 0 && (
-          <div className="px-4 pb-3">
-            <SavedPlaceChips
-              initialPlaces={savedPlaces}
-              lang={lang}
-              onSelect={(name) => setOriginName(name)}
-              compact
-            />
+        <div className="px-4 pt-4 pb-3">
+          <div className="mb-3">
+            <p className="block text-[10px] font-bold text-sky-600 dark:text-sky-400 uppercase tracking-widest mb-1">
+              {pickupCopy.trustedPickupPoint} <span className="text-red-400 ml-0.5">*</span>
+            </p>
+            <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+              {pickupCopy.pickupPointHelper}
+            </p>
           </div>
-        )}
+
+          {hasTrustedMeetingPoints && (
+            <div className="grid gap-2">
+              {meetingPoints.map((point) => {
+                const isSelected = originMode === 'trusted' && selectedMeetingPoint?.id === point.id;
+                return (
+                  <button
+                    key={point.id}
+                    type="button"
+                    aria-pressed={isSelected}
+                    onClick={() => selectTrustedMeetingPoint(point)}
+                    className={`flex min-h-[76px] w-full items-start gap-3 rounded-2xl border px-3 py-3 text-start transition-colors ${
+                      isSelected
+                        ? 'border-sky-500 bg-sky-50 text-sky-950 dark:border-sky-500 dark:bg-sky-950/40 dark:text-sky-50'
+                        : 'border-slate-200 bg-slate-50/70 text-slate-700 hover:border-sky-300 hover:bg-white dark:border-slate-800 dark:bg-slate-950/35 dark:text-slate-200 dark:hover:border-sky-700'
+                    }`}
+                  >
+                    <span
+                      className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl ${
+                        isSelected
+                          ? 'bg-sky-600 text-white'
+                          : 'bg-white text-sky-600 dark:bg-slate-900 dark:text-sky-300'
+                      }`}
+                      aria-hidden="true"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 21s7-4.5 7-11a7 7 0 0 0-14 0c0 6.5 7 11 7 11Z" />
+                        <circle cx="12" cy="10" r="2.5" />
+                      </svg>
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="flex flex-wrap items-center gap-2">
+                        <span className="text-sm font-black" dir="auto">{point.label}</span>
+                        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-emerald-700 dark:bg-emerald-900/35 dark:text-emerald-300">
+                          {pickupCopy.trustedWaypoint}
+                        </span>
+                        {hasCoordinates(point) && (
+                          <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-black text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                            {pickupCopy.coordinatesSaved}
+                          </span>
+                        )}
+                      </span>
+                      <span className="mt-1 block text-xs leading-relaxed text-slate-500 dark:text-slate-400" dir="auto">
+                        {point.location_context}
+                      </span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          <div className={hasTrustedMeetingPoints ? 'mt-3' : ''}>
+            <button
+              type="button"
+              onClick={() => selectCustomOrigin(originName)}
+              aria-pressed={originMode === 'custom'}
+              className={`inline-flex min-h-10 items-center rounded-full border px-3 text-xs font-black transition-colors ${
+                originMode === 'custom'
+                  ? 'border-slate-900 bg-slate-900 text-white dark:border-slate-100 dark:bg-slate-100 dark:text-slate-950'
+                  : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300'
+              }`}
+            >
+              {pickupCopy.useCustomPickup}
+            </button>
+          </div>
+
+          {originMode === 'custom' && (
+            <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50/80 px-3 py-3 dark:border-slate-800 dark:bg-slate-950/35">
+              <label htmlFor="origin" className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1">
+                {pickupCopy.customPickup}
+              </label>
+              <input
+                id="origin"
+                type="text"
+                value={originName}
+                onChange={(event) => setOriginName(event.target.value)}
+                onBlur={() => markOriginTouched()}
+                placeholder={pickupCopy.customPickupPlaceholder}
+                className="w-full bg-transparent text-[15px] font-medium text-slate-900 dark:text-slate-100 placeholder-slate-300 dark:placeholder-slate-600 focus:outline-none"
+                autoComplete="off"
+              />
+              <p className="mt-1 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
+                {pickupCopy.customPickupHelper}
+              </p>
+              {savedPlaces.length > 0 && (
+                <div className="mt-2">
+                  <SavedPlaceChips
+                    initialPlaces={savedPlaces}
+                    lang={lang}
+                    onSelect={(name) => applyOriginText(name)}
+                    compact
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
+          {originError && <p className="text-[10px] text-red-500 mt-2">{originError}</p>}
+        </div>
         <div className="flex items-center px-4">
           <div className="flex flex-col items-center mr-3">
             <div className="w-2 h-2 rounded-full bg-sky-500" />
@@ -1091,7 +1303,7 @@ export default function CreateTripForm({
       </div>
 
       {/* Preview */}
-      <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 p-4">
+      <div className="create-preview-card rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 p-4">
         <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">{copy.preview}</p>
         <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{routePreview}</p>
 
@@ -1163,7 +1375,7 @@ export default function CreateTripForm({
           type="submit"
           disabled={loading}
           data-testid="publish-trip-button"
-          className="w-full rounded-2xl bg-sky-600 dark:bg-sky-500 px-4 py-4 text-base font-bold text-white hover:bg-sky-700 dark:hover:bg-sky-600 disabled:opacity-50 transition-colors btn-press shadow-md"
+          className="create-submit-button w-full rounded-2xl bg-sky-600 dark:bg-sky-500 px-4 py-4 text-base font-bold text-white hover:bg-sky-700 dark:hover:bg-sky-600 disabled:opacity-50 transition-colors btn-press shadow-md"
         >
           {loading ? copy.publishingRide : copy.publishRide}
         </button>

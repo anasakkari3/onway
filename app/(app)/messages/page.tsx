@@ -140,7 +140,7 @@ export default async function MessagesPage() {
   }
 
   return (
-    <div className="p-4 max-w-lg mx-auto space-y-4 pb-24">
+    <div className="p-4 max-w-lg mx-auto space-y-4">
       <section className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm">
         <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
           {copy.title}

@@ -12,7 +12,7 @@ export default async function AppLayout({
   return (
     <div className="min-h-screen flex flex-col app-shell">
       <AppNav />
-      <main className="flex-1 pt-16 animate-fade-in-up">{children}</main>
+      <main className="app-main flex-1 animate-fade-in-up">{children}</main>
       {/* First-time user tour — client-side, reads localStorage */}
       <OnboardingTour />
     </div>

@@ -72,7 +72,7 @@ export default async function TripDetailPage({
   }
 
   return (
-    <div className="p-4 max-w-lg mx-auto pb-8">
+    <div className="trip-detail-page py-4">
       <TripDetailClient
         trip={trip}
         bookings={authorizedBookings ?? []}

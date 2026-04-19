@@ -2,11 +2,13 @@
 
 import { bookSeat as bookSeatService, cancelBooking as cancelBookingService } from '@/lib/services/booking';
 import { updateTripStatus as updateTripStatusService } from '@/lib/services/trip';
+import { confirmPreDepartureReadiness } from '@/lib/services/pre-departure-confirmation';
 import { getCurrentUser } from '@/lib/auth/session';
 import { getAdminFirestore } from '@/lib/firebase/firestore-admin';
 import { createNotification } from '@/lib/services/notification';
 import { getEffectiveTripStatus } from '@/lib/trips/lifecycle';
 import type { BookingsRow, TripsRow } from '@/lib/types';
+import type { PreDepartureConfirmationState } from '@/lib/types';
 import { getTripCommunicationAccessForUser } from '@/lib/services/message';
 import { canSendCoordinationAction, type CoordinationActionKey } from '@/lib/trips/coordination';
 import { logWarn } from '@/lib/observability/logger';
@@ -35,6 +37,13 @@ export async function updateTripStatusAction(
   status: 'in_progress' | 'completed' | 'cancelled'
 ) {
   return updateTripStatusService(tripId, status);
+}
+
+export async function confirmPreDepartureReadinessAction(
+  tripId: string,
+  response: Extract<PreDepartureConfirmationState, 'confirmed' | 'not_confirmed'>
+) {
+  return confirmPreDepartureReadiness(tripId, response);
 }
 
 const ACTION_COPY: Record<CoordinationActionKey, string> = {

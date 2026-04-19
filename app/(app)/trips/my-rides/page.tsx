@@ -7,19 +7,48 @@ import { getCurrentUser } from '@/lib/auth/session';
 import { getServerI18n } from '@/lib/i18n/server';
 import { formatLocalizedDateTime, formatSeatAvailability } from '@/lib/i18n/locale';
 import { getMyTripsAsDriver, getMyBookings } from '@/lib/services/trip';
+import type { PreDepartureConfirmationState, TripWithDriver } from '@/lib/types';
+import {
+  getPreDepartureConfirmationState,
+  getPreDepartureWindow,
+} from '@/lib/trips/pre-departure';
 import { getTripStatusPresentationWithTranslation } from '@/lib/trips/presentation';
 
 const COPY = {
   en: {
     guide: 'This page collects rides you joined as a passenger and rides you published as a driver. Open any ride to manage booking, chat, or status.',
+    preDepartureNow: 'Confirm now',
+    preDepartureReady: 'Ready',
+    preDepartureNotReady: 'Not ready',
+    preDepartureNoResponse: 'No response',
+    preDeparturePending: 'Pending',
   },
   ar: {
     guide: 'هذه الصفحة تجمع الرحلات التي حجزتها كراكب والرحلات التي نشرتها كسائق. افتح أي رحلة لإدارة الحجز أو الدردشة أو الحالة.',
+    preDepartureNow: 'أكد الآن',
+    preDepartureReady: 'جاهز',
+    preDepartureNotReady: 'غير جاهز',
+    preDepartureNoResponse: 'لا يوجد رد',
+    preDeparturePending: 'بانتظار الرد',
   },
   he: {
     guide: 'כאן מופיעות נסיעות שהצטרפתם אליהן כנוסעים ונסיעות שפרסמתם כנהגים. פתחו נסיעה כדי לנהל הזמנה, צ׳אט או סטטוס.',
+    preDepartureNow: 'אשרו עכשיו',
+    preDepartureReady: 'מוכן/ה',
+    preDepartureNotReady: 'לא מוכן/ה',
+    preDepartureNoResponse: 'אין תגובה',
+    preDeparturePending: 'ממתין',
   },
 } as const;
+
+type MyRidesCopy = {
+  guide: string;
+  preDepartureNow: string;
+  preDepartureReady: string;
+  preDepartureNotReady: string;
+  preDepartureNoResponse: string;
+  preDeparturePending: string;
+};
 
 function PassengerIcon() {
   return (
@@ -39,6 +68,40 @@ function DriverIcon() {
       <circle cx="17" cy="16" r="2" />
     </svg>
   );
+}
+
+function getPreDepartureBadge(
+  trip: TripWithDriver,
+  role: 'driver' | 'passenger',
+  copy: MyRidesCopy
+) {
+  const window = getPreDepartureWindow(trip);
+  if (window.isBeforeWindow && !trip.pre_departure_prompted_at) return null;
+
+  const confirmation =
+    role === 'driver'
+      ? trip.pre_departure_driver_confirmation
+      : trip.current_user_booking?.pre_departure_confirmation;
+  const state = getPreDepartureConfirmationState(confirmation, trip);
+  const isActionable = window.isOpen && state === 'pending';
+
+  const labels: Record<PreDepartureConfirmationState, string> = {
+    pending: isActionable ? copy.preDepartureNow : copy.preDeparturePending,
+    confirmed: copy.preDepartureReady,
+    not_confirmed: copy.preDepartureNotReady,
+    expired: copy.preDepartureNoResponse,
+  };
+  const classes: Record<PreDepartureConfirmationState, string> = {
+    pending: 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800/70 dark:bg-amber-900/20 dark:text-amber-300',
+    confirmed: 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800/70 dark:bg-emerald-900/20 dark:text-emerald-300',
+    not_confirmed: 'border-red-200 bg-red-50 text-red-700 dark:border-red-800/70 dark:bg-red-900/20 dark:text-red-300',
+    expired: 'border-slate-200 bg-slate-100 text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300',
+  };
+
+  return {
+    label: labels[state],
+    className: classes[state],
+  };
 }
 
 export default async function MyRidesPage() {
@@ -110,12 +173,13 @@ export default async function MyRidesPage() {
               <div className="space-y-3">
                 {myBookings.map((trip) => {
                   const statusUi = getTripStatusPresentationWithTranslation(trip, t);
+                  const preDepartureBadge = getPreDepartureBadge(trip, 'passenger', copy);
 
                   return (
                     <Link
                       key={trip.id}
                       href={`/trips/${trip.id}`}
-                      className="block rounded-3xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm card-hover relative overflow-hidden group"
+                      className={`block rounded-3xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm card-hover relative overflow-hidden group ${statusUi.cardClassName}`}
                     >
                       <div className="flex items-center gap-3">
                         <div
@@ -146,6 +210,11 @@ export default async function MyRidesPage() {
                             <span className="text-[11px] text-slate-400 dark:text-slate-500">
                               {formatSeatAvailability(trip.seats_available, t)}
                             </span>
+                            {preDepartureBadge && (
+                              <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold ${preDepartureBadge.className}`}>
+                                {preDepartureBadge.label}
+                              </span>
+                            )}
                           </div>
                         </div>
                         <span className="text-slate-300 dark:text-slate-600 shrink-0 group-hover:text-sky-500 transition-colors">
@@ -169,12 +238,13 @@ export default async function MyRidesPage() {
               <div className="space-y-3">
                 {myTrips.map((trip) => {
                   const statusUi = getTripStatusPresentationWithTranslation(trip, t);
+                  const preDepartureBadge = getPreDepartureBadge(trip, 'driver', copy);
 
                   return (
                     <Link
                       key={trip.id}
                       href={`/trips/${trip.id}`}
-                      className="block rounded-3xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm card-hover relative overflow-hidden group"
+                      className={`block rounded-3xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm card-hover relative overflow-hidden group ${statusUi.cardClassName}`}
                     >
                       <div className="flex items-center gap-3">
                         <div
@@ -205,6 +275,11 @@ export default async function MyRidesPage() {
                             <span className="text-[11px] text-slate-400 dark:text-slate-500">
                               {formatSeatAvailability(trip.seats_available, t)}
                             </span>
+                            {preDepartureBadge && (
+                              <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold ${preDepartureBadge.className}`}>
+                                {preDepartureBadge.label}
+                              </span>
+                            )}
                           </div>
                         </div>
                         <span className="text-slate-300 dark:text-slate-600 shrink-0 group-hover:text-emerald-500 transition-colors">

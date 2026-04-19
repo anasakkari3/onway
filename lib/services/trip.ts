@@ -1,6 +1,7 @@
 import { getAdminFirestore } from '@/lib/firebase/firestore-admin';
 import { getCurrentUser } from '@/lib/auth/session';
 import type {
+  BookingsRow,
   CommunityType,
   TripMode,
   TripPassengerGenderPreference,
@@ -46,6 +47,7 @@ import {
   MAX_RECURRING_DAYS,
 } from '@/lib/trips/recurrence';
 import { markRouteRequestFulfilled, notifyRouteAlertsForTrip } from './activation';
+import { resolveMeetingPointForTripInput } from './meeting-points';
 
 function withEffectiveStatus<T extends { status: TripStatus; seats_available: number }>(trip: T): T {
   return {
@@ -114,6 +116,7 @@ export type CreateTripInput = {
   /** Geographic coordinates. Pass null/omit when geocoding is not available (MVP). */
   originLat?: number | null;
   originLng?: number | null;
+  originMeetingPointId?: string | null;
   originName: string;
   destinationLat?: number | null;
   destinationLng?: number | null;
@@ -181,9 +184,19 @@ export async function createTrip(input: CreateTripInput) {
     throw new NotFoundError('Community not found');
   }
 
-  if (!input.originName.trim() || !input.destinationName.trim()) {
+  if (!input.destinationName.trim()) {
     throw new AppError('Origin and destination are required', 'BAD_REQUEST');
   }
+  const originMeetingPoint = await resolveMeetingPointForTripInput({
+    communityId: input.communityId,
+    meetingPointId: input.originMeetingPointId,
+    customLabel: input.originName,
+    fallbackOriginName: input.originName,
+    fallbackOriginLat: input.originLat,
+    fallbackOriginLng: input.originLng,
+    db,
+  });
+  const destinationName = input.destinationName.trim();
 
   const vehicleMakeModel = normalizeOptionalTripText(
     input.vehicleMakeModel,
@@ -319,12 +332,16 @@ export async function createTrip(input: CreateTripInput) {
     community_name: community.name,
     community_type: community.type,
     driver_id: user.id,
-    origin_lat: input.originLat ?? null,
-    origin_lng: input.originLng ?? null,
-    origin_name: input.originName,
+    origin_lat: originMeetingPoint.originLat,
+    origin_lng: originMeetingPoint.originLng,
+    origin_name: originMeetingPoint.originName,
+    origin_meeting_point_id: originMeetingPoint.meetingPointId,
+    origin_meeting_point_label: originMeetingPoint.meetingPointLabel,
+    origin_meeting_point_context: originMeetingPoint.meetingPointContext,
+    origin_meeting_point_source: originMeetingPoint.meetingPointSource,
     destination_lat: input.destinationLat ?? null,
     destination_lng: input.destinationLng ?? null,
-    destination_name: input.destinationName,
+    destination_name: destinationName,
     vehicle_make_model: vehicleMakeModel,
     vehicle_color: vehicleColor,
     driver_note: driverNote,
@@ -368,8 +385,8 @@ export async function createTrip(input: CreateTripInput) {
         routeRequestId: input.routeRequestId,
         communityId: input.communityId,
         tripId: ref.id,
-        tripOriginName: input.originName,
-        tripDestinationName: input.destinationName,
+        tripOriginName: originMeetingPoint.originName,
+        tripDestinationName: destinationName,
         driverId: user.id,
         db,
       }),
@@ -378,8 +395,8 @@ export async function createTrip(input: CreateTripInput) {
         trip: {
           community_id: input.communityId,
           driver_id: user.id,
-          origin_name: input.originName,
-          destination_name: input.destinationName,
+          origin_name: originMeetingPoint.originName,
+          destination_name: destinationName,
           departure_time: departureDate.toISOString(),
         },
         db,
@@ -676,6 +693,40 @@ export async function getUpcomingTripsForCommunities(
     .slice(0, limitCount);
 }
 
+export async function getActiveTripCountsForCommunities(
+  communityIds: string[]
+): Promise<Map<string, number>> {
+  const uniqueCommunityIds = [...new Set(communityIds.filter(isAllowedCommunityId))];
+  const counts = new Map(uniqueCommunityIds.map((communityId) => [communityId, 0]));
+
+  if (uniqueCommunityIds.length === 0) {
+    return counts;
+  }
+
+  const db = getAdminFirestore();
+  const now = Date.now();
+
+  await Promise.all(
+    uniqueCommunityIds.map(async (communityId) => {
+      const snap = await db
+        .collection('trips')
+        .where('community_id', '==', communityId)
+        .where('status', 'in', [...ACTIVE_TRIP_STATUSES])
+        .get();
+
+      const activeCount = snap.docs.filter((doc) => {
+        const trip = withEffectiveStatus({ id: doc.id, ...doc.data() } as TripWithDriver);
+        if (trip.status === 'in_progress') return true;
+        return new Date(trip.departure_time).getTime() > now;
+      }).length;
+
+      counts.set(communityId, activeCount);
+    })
+  );
+
+  return counts;
+}
+
 /** Get upcoming reservations where the current user is a passenger */
 export async function getMyBookings(): Promise<TripWithDriver[]> {
   const user = await getCurrentUser();
@@ -690,7 +741,14 @@ export async function getMyBookings(): Promise<TripWithDriver[]> {
 
   if (bookingsSnap.empty) return [];
 
-  const tripIds = [...new Set(bookingsSnap.docs.map((d) => d.data().trip_id as string))];
+  const bookingByTripId = new Map<string, BookingsRow>();
+  bookingsSnap.docs.forEach((doc) => {
+    const booking = { id: doc.id, ...doc.data() } as BookingsRow;
+    if (!bookingByTripId.has(booking.trip_id)) {
+      bookingByTripId.set(booking.trip_id, booking);
+    }
+  });
+  const tripIds = [...bookingByTripId.keys()];
   const results: TripWithDriver[] = [];
 
   for (const tripId of tripIds) {
@@ -710,6 +768,7 @@ export async function getMyBookings(): Promise<TripWithDriver[]> {
       driver,
       driver_completed_drives: driverTrustProfile.driver_trips_count,
       driver_trust_profile: driverTrustProfile,
+      current_user_booking: bookingByTripId.get(tripId) ?? null,
     });
   }
 

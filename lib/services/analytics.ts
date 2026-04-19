@@ -16,6 +16,7 @@ export type AnalyticsEventName =
   | 'route_alert_matched'
   | 'trip_started'
   | 'trip_completed'
+  | 'pre_departure_confirmation_updated'
   | 'rating_submitted'
   | 'message_sent'
   // --- Conversion & engagement signals ---

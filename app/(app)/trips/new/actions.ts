@@ -13,6 +13,7 @@ export async function createTrip(input: {
   /** Omit when geocoding is not available — stored as null in Firestore. */
   originLat?: number | null;
   originLng?: number | null;
+  originMeetingPointId?: string | null;
   originName: string;
   destinationLat?: number | null;
   destinationLng?: number | null;

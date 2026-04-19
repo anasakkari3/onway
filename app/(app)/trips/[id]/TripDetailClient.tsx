@@ -9,6 +9,7 @@ import { useTranslation } from '@/lib/i18n/LanguageProvider';
 import { getFirebaseFirestore } from '@/lib/firebase/config';
 import type {
   BookingWithPassenger,
+  PreDepartureConfirmationState,
   TripPassengerGenderPreference,
   TripRulePresetKey,
   TripWithDriver,
@@ -31,10 +32,22 @@ import {
   formatSeatCount,
   getRelativeDayLabel,
 } from '@/lib/i18n/locale';
-import { bookSeat, cancelBookingAction, updateTripStatusAction } from './actions';
+import {
+  bookSeat,
+  cancelBookingAction,
+  confirmPreDepartureReadinessAction,
+  updateTripStatusAction,
+} from './actions';
 import { getEffectiveTripStatus } from '@/lib/trips/lifecycle';
+import { getTripStatusPresentationWithTranslation } from '@/lib/trips/presentation';
 import { canStartTrip, canCompleteTrip } from '@/lib/trips/lifecycle-permissions';
-import { DriverTrustSummary } from '@/app/(app)/DriverTrustSummary';
+import {
+  getPreDepartureConfirmationState,
+  getPreDepartureWindow,
+  isPreDepartureConfirmationActionOpen,
+  type PreDepartureConfirmationResponse,
+} from '@/lib/trips/pre-departure';
+import { DriverTrustPassport } from '@/components/DriverTrustPassport';
 import CommunityBadge from '@/components/CommunityBadge';
 import EmptyStateCard from '@/components/EmptyStateCard';
 import GuideHint from '@/components/GuideHint';
@@ -73,8 +86,18 @@ const SURFACE_COPY = {
     rosterEmptyTitle: 'No passengers yet',
     rosterEmptyDesc:
       'This trip is already live in the community. Seats will appear here as riders book.',
+    liveTripTitle: 'LIVE now',
+    liveTripDriverDesc:
+      'This ride is in progress. Keep coordination in the trip thread and mark it completed when the ride ends.',
+    liveTripRiderDesc:
+      'This ride is in progress. Use the trip thread for pickup notes and live coordination.',
   },
   ar: {
+    liveTripTitle: 'مباشرة الآن',
+    liveTripDriverDesc:
+      'هذه الرحلة قيد التنفيذ. أبق التنسيق داخل محادثة الرحلة، ثم علّمها كمكتملة عند انتهاء المشوار.',
+    liveTripRiderDesc:
+      'هذه الرحلة قيد التنفيذ. استخدم محادثة الرحلة لملاحظات الالتقاء والتنسيق المباشر.',
     communicationReady: 'تواصل الرحلة',
     communicationReadOnly: 'تحديثات الرحلة',
     communicationReadyDesc:
@@ -90,6 +113,11 @@ const SURFACE_COPY = {
     rosterEmptyDesc: 'هذه الرحلة منشورة الآن داخل المجتمع. ستظهر المقاعد هنا عندما يبدأ الركاب بالحجز.',
   },
   he: {
+    liveTripTitle: 'חי עכשיו',
+    liveTripDriverDesc:
+      'הנסיעה פעילה עכשיו. שמרו את התיאום בשרשור הנסיעה וסמנו אותה כהושלמה בסיום.',
+    liveTripRiderDesc:
+      'הנסיעה פעילה עכשיו. השתמשו בשרשור הנסיעה להערות איסוף ולתיאום בזמן אמת.',
     communicationReady: 'תקשורת נסיעה',
     communicationReadOnly: 'עדכוני נסיעה',
     communicationReadyDesc:
@@ -103,6 +131,132 @@ const SURFACE_COPY = {
       'בדקו את המסלול, השעה, פרטי הנהג והכללים. אם הכול מתאים, אשרו הזמנה ואז השתמשו בצ׳אט לתיאום האיסוף.',
     rosterEmptyTitle: 'עדיין אין נוסעים',
     rosterEmptyDesc: 'הנסיעה כבר פעילה בקהילה. מושבים יופיעו כאן ברגע שמישהו יזמין.',
+  },
+} as const;
+
+const PICKUP_COPY = {
+  en: {
+    trustedPickup: 'Trusted pickup',
+    customPickup: 'Custom pickup',
+    pickupContext: 'Pickup context',
+    mapReady: 'Map-ready point',
+  },
+  ar: {
+    trustedPickup: 'نقطة لقاء موثوقة',
+    customPickup: 'نقطة مخصصة',
+    pickupContext: 'تفاصيل نقطة اللقاء',
+    mapReady: 'جاهزة للخريطة',
+  },
+  he: {
+    trustedPickup: 'נקודת מפגש מוכרת',
+    customPickup: 'איסוף מותאם',
+    pickupContext: 'פרטי נקודת המפגש',
+    mapReady: 'מוכן למפה',
+  },
+} as const;
+
+const PRE_DEPARTURE_COPY = {
+  en: {
+    eyebrow: 'Departure check',
+    title: 'Confirm readiness',
+    activeDesc:
+      'This ride leaves soon. Driver and riders can confirm with one tap so nobody is guessing at the curb.',
+    expiredDesc:
+      'The check-in window closed at departure time. Missing replies now show as no response.',
+    driver: 'Driver',
+    riders: 'Riders',
+    you: 'You',
+    noRiders: 'No riders to confirm yet',
+    ready: "I'm ready",
+    notReady: 'Not ready',
+    status: {
+      pending: 'Pending',
+      confirmed: 'Ready',
+      not_confirmed: 'Not ready',
+      expired: 'No response',
+    } satisfies Record<PreDepartureConfirmationState, string>,
+    opensIn: (minutes: number) =>
+      `Check-in opens in ${minutes} min, 30 minutes before departure.`,
+    leavesIn: (minutes: number) => `Leaving in ${minutes} min`,
+    exactDeparture: (time: string) => `Exact departure: ${time}`,
+    riderProgress: (ready: number, total: number) => `${ready}/${total} riders ready`,
+    attentionSummary: (notReady: number, noResponse: number) =>
+      [
+        notReady > 0 ? `${notReady} not ready` : null,
+        noResponse > 0 ? `${noResponse} no response` : null,
+      ]
+        .filter(Boolean)
+        .join(' · '),
+    confirmedNotice: 'Readiness confirmed.',
+    notConfirmedNotice: 'Marked not ready. The trip now shows that coordination is needed.',
+  },
+  ar: {
+    eyebrow: 'فحص ما قبل الانطلاق',
+    title: 'تأكيد الجاهزية',
+    activeDesc:
+      'هذه الرحلة ستنطلق قريبًا. يمكن للسائق والركاب تأكيد الجاهزية بلمسة واحدة حتى لا يبقى أحد في حالة انتظار.',
+    expiredDesc:
+      'انتهت مهلة التأكيد عند وقت الانطلاق. الردود الناقصة تظهر الآن كعدم رد.',
+    driver: 'السائق',
+    riders: 'الركاب',
+    you: 'أنت',
+    noRiders: 'لا يوجد ركاب للتأكيد بعد',
+    ready: 'أنا جاهز',
+    notReady: 'لست جاهزًا',
+    status: {
+      pending: 'بانتظار الرد',
+      confirmed: 'جاهز',
+      not_confirmed: 'غير جاهز',
+      expired: 'لا يوجد رد',
+    } satisfies Record<PreDepartureConfirmationState, string>,
+    opensIn: (minutes: number) =>
+      `يفتح التأكيد خلال ${minutes} دقيقة، قبل الانطلاق بـ 30 دقيقة.`,
+    leavesIn: (minutes: number) => `الانطلاق خلال ${minutes} دقيقة`,
+    exactDeparture: (time: string) => `وقت الانطلاق: ${time}`,
+    riderProgress: (ready: number, total: number) => `${ready}/${total} ركاب جاهزون`,
+    attentionSummary: (notReady: number, noResponse: number) =>
+      [
+        notReady > 0 ? `${notReady} غير جاهز` : null,
+        noResponse > 0 ? `${noResponse} بلا رد` : null,
+      ]
+        .filter(Boolean)
+        .join(' · '),
+    confirmedNotice: 'تم تأكيد الجاهزية.',
+    notConfirmedNotice: 'تم وضعك كغير جاهز. تظهر الرحلة الآن أنها تحتاج تنسيقًا.',
+  },
+  he: {
+    eyebrow: 'בדיקה לפני יציאה',
+    title: 'אישור מוכנות',
+    activeDesc:
+      'הנסיעה יוצאת בקרוב. הנהג והנוסעים יכולים לאשר בלחיצה אחת כדי שלא נשארים בחוסר ודאות.',
+    expiredDesc:
+      'חלון האישור נסגר בזמן היציאה. תגובות חסרות מוצגות עכשיו כאין תגובה.',
+    driver: 'נהג',
+    riders: 'נוסעים',
+    you: 'את/ה',
+    noRiders: 'עדיין אין נוסעים לאישור',
+    ready: 'אני מוכן/ה',
+    notReady: 'לא מוכן/ה',
+    status: {
+      pending: 'ממתין',
+      confirmed: 'מוכן/ה',
+      not_confirmed: 'לא מוכן/ה',
+      expired: 'אין תגובה',
+    } satisfies Record<PreDepartureConfirmationState, string>,
+    opensIn: (minutes: number) =>
+      `האישור ייפתח בעוד ${minutes} דקות, 30 דקות לפני היציאה.`,
+    leavesIn: (minutes: number) => `יוצאים בעוד ${minutes} דקות`,
+    exactDeparture: (time: string) => `שעת יציאה: ${time}`,
+    riderProgress: (ready: number, total: number) => `${ready}/${total} נוסעים מוכנים`,
+    attentionSummary: (notReady: number, noResponse: number) =>
+      [
+        notReady > 0 ? `${notReady} לא מוכנים` : null,
+        noResponse > 0 ? `${noResponse} ללא תגובה` : null,
+      ]
+        .filter(Boolean)
+        .join(' · '),
+    confirmedNotice: 'המוכנות אושרה.',
+    notConfirmedNotice: 'סומן שלא מוכנים. הנסיעה מציגה עכשיו שנדרש תיאום.',
   },
 } as const;
 
@@ -352,6 +506,57 @@ function getParticipantInitial(name: string | null | undefined, fallback: string
   return (initial || fallback || 'P').toUpperCase();
 }
 
+function getPreDepartureStatusClasses(state: PreDepartureConfirmationState) {
+  if (state === 'confirmed') {
+    return {
+      chip: 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800/70 dark:bg-emerald-900/20 dark:text-emerald-300',
+      dot: 'bg-emerald-500',
+    };
+  }
+
+  if (state === 'not_confirmed') {
+    return {
+      chip: 'border-red-200 bg-red-50 text-red-700 dark:border-red-800/70 dark:bg-red-900/20 dark:text-red-300',
+      dot: 'bg-red-500',
+    };
+  }
+
+  if (state === 'expired') {
+    return {
+      chip: 'border-slate-200 bg-slate-100 text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300',
+      dot: 'bg-slate-400',
+    };
+  }
+
+  return {
+    chip: 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800/70 dark:bg-amber-900/20 dark:text-amber-300',
+    dot: 'bg-amber-500',
+  };
+}
+
+function PreDepartureStatusPill({
+  state,
+  label,
+  compact = false,
+}: {
+  state: PreDepartureConfirmationState;
+  label: string;
+  compact?: boolean;
+}) {
+  const classes = getPreDepartureStatusClasses(state);
+
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full border font-bold ${classes.chip} ${
+        compact ? 'px-2 py-0.5 text-[10px]' : 'px-2.5 py-1 text-[11px]'
+      }`}
+    >
+      <span className={`h-1.5 w-1.5 rounded-full ${classes.dot}`} aria-hidden="true" />
+      {label}
+    </span>
+  );
+}
+
 export default function TripDetailClient({
   trip: initialTrip,
   bookings: initialBookings,
@@ -363,11 +568,16 @@ export default function TripDetailClient({
   const { t, lang } = useTranslation();
   const copy = DETAIL_COPY[lang] ?? DETAIL_COPY.en;
   const surfaceCopy = SURFACE_COPY[lang] ?? SURFACE_COPY.en;
+  const pickupCopy = PICKUP_COPY[lang] ?? PICKUP_COPY.en;
+  const preDepartureCopy = PRE_DEPARTURE_COPY[lang] ?? PRE_DEPARTURE_COPY.en;
   const trustCopy = brandCopy(TRUST_COPY[lang] ?? TRUST_COPY.en);
   const [trip, setTrip] = useState(initialTrip);
   const [bookings, setBookings] = useState(initialBookings);
   const [loading, setLoading] = useState(false);
   const [statusLoading, setStatusLoading] = useState(false);
+  const [preDepartureLoading, setPreDepartureLoading] =
+    useState<PreDepartureConfirmationResponse | null>(null);
+  const [timeNow, setTimeNow] = useState(() => Date.now());
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(wasJustCreated ? copy.tripLiveNotice : null);
   const [showBookConfirm, setShowBookConfirm] = useState(false);
@@ -391,6 +601,11 @@ export default function TripDetailClient({
   // mirror the chat-redirect bug — silently wiping legitimate data the
   // server already authorized us to see.
   const hasObservedBookingsRef = useRef(false);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => setTimeNow(Date.now()), 60 * 1000);
+    return () => window.clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -522,6 +737,44 @@ export default function TripDetailClient({
   const isCancelled = effectiveStatus === 'cancelled';
   const isActiveTrip = isScheduled || isFull || isInProgress;
   const { date, time, isPast, isSoon } = formatDeparture(trip.departure_time, lang, t);
+  const preDepartureNow = new Date(timeNow);
+  const preDepartureWindow = getPreDepartureWindow(trip, preDepartureNow);
+  const showPreDepartureProtocol = (isDriver || hasBooked) && isActiveTrip;
+  const driverPreDepartureState = getPreDepartureConfirmationState(
+    trip.pre_departure_driver_confirmation,
+    trip,
+    preDepartureNow
+  );
+  const myPreDepartureState = getPreDepartureConfirmationState(
+    isDriver ? trip.pre_departure_driver_confirmation : myBooking?.pre_departure_confirmation,
+    trip,
+    preDepartureNow
+  );
+  const riderPreDepartureItems = confirmedBookings.map((booking) => ({
+    id: booking.id,
+    state: getPreDepartureConfirmationState(
+      booking.pre_departure_confirmation,
+      trip,
+      preDepartureNow
+    ),
+  }));
+  const riderPreDepartureStates = riderPreDepartureItems.map((item) => item.state);
+  const readyRiderCount = riderPreDepartureStates.filter((state) => state === 'confirmed').length;
+  const notReadyRiderCount = riderPreDepartureStates.filter(
+    (state) => state === 'not_confirmed'
+  ).length;
+  const noResponseRiderCount = riderPreDepartureStates.filter(
+    (state) => state === 'expired'
+  ).length;
+  const canActOnPreDeparture =
+    showPreDepartureProtocol && isPreDepartureConfirmationActionOpen(trip, preDepartureNow);
+  const showPreDepartureStates =
+    showPreDepartureProtocol &&
+    (!preDepartureWindow.isBeforeWindow || Boolean(trip.pre_departure_prompted_at));
+  const preDepartureAttention = preDepartureCopy.attentionSummary(
+    notReadyRiderCount + (driverPreDepartureState === 'not_confirmed' ? 1 : 0),
+    noResponseRiderCount + (driverPreDepartureState === 'expired' ? 1 : 0)
+  );
   const passengerPreference = normalizeTripPassengerGenderPreference(
     trip.passenger_gender_preference
   );
@@ -563,6 +816,11 @@ export default function TripDetailClient({
     [trip.vehicle_make_model?.trim(), trip.vehicle_color?.trim()].filter(Boolean).join(' · ') || null;
   const driverNote = trip.driver_note?.trim() || null;
   const additionalRideNote = trip.trip_rules_note?.trim() || null;
+  const pickupContext = trip.origin_meeting_point_context?.trim() || null;
+  const isTrustedPickup =
+    trip.origin_meeting_point_source === 'trusted' && Boolean(trip.origin_meeting_point_id);
+  const hasPickupCoordinates = trip.origin_lat != null && trip.origin_lng != null;
+  const pickupLabel = isTrustedPickup ? pickupCopy.trustedPickup : pickupCopy.customPickup;
 
   // --- Recurring detection (defensive: falls back gracefully for old trips) --
   const isRecurring = isRecurringTrip({
@@ -585,14 +843,8 @@ export default function TripDetailClient({
     isDriver,
   });
 
-  const statusConfig = {
-    scheduled: { label: isPast ? copy.departed : t('scheduled'), color: 'bg-sky-500' },
-    full: { label: t('full'), color: 'bg-amber-500' },
-    in_progress: { label: t('in_progress'), color: 'bg-indigo-500' },
-    completed: { label: t('completed'), color: 'bg-emerald-500' },
-    cancelled: { label: t('cancelled'), color: 'bg-red-500' },
-    draft: { label: t('draft'), color: 'bg-slate-500' },
-  }[effectiveStatus];
+  const statusUi = getTripStatusPresentationWithTranslation(trip, (key) => t(key));
+  const statusLabel = effectiveStatus === 'scheduled' && isPast ? copy.departed : statusUi.label;
 
   const resetBookingAcks = () => {
     setBookingAcks({
@@ -672,6 +924,53 @@ export default function TripDetailClient({
     setLoading(false);
   };
 
+  const handlePreDepartureConfirmation = async (
+    response: PreDepartureConfirmationResponse
+  ) => {
+    setPreDepartureLoading(response);
+    setError(null);
+    setNotice(null);
+
+    try {
+      const result = await confirmPreDepartureReadinessAction(trip.id, response);
+      if (result.role === 'driver') {
+        setTrip((prev) => ({
+          ...prev,
+          pre_departure_driver_confirmation: result.confirmation,
+          pre_departure_expires_at: preDepartureWindow.expiresAt.toISOString(),
+        }));
+      } else {
+        setBookings((prev) =>
+          prev.map((booking) =>
+            result.bookingIds.includes(booking.id)
+              ? {
+                  ...booking,
+                  pre_departure_confirmation: result.confirmation,
+                }
+              : booking
+          )
+        );
+      }
+
+      setNotice(
+        response === 'confirmed'
+          ? preDepartureCopy.confirmedNotice
+          : preDepartureCopy.notConfirmedNotice
+      );
+    } catch (confirmationError) {
+      setError(
+        localizeTripActionError(
+          confirmationError instanceof Error
+            ? confirmationError.message
+            : copy.errors.genericUpdate,
+          lang
+        )
+      );
+    }
+
+    setPreDepartureLoading(null);
+  };
+
   const handleTripStatus = async (status: 'in_progress' | 'completed' | 'cancelled') => {
     setStatusLoading(true);
     setError(null);
@@ -704,18 +1003,20 @@ export default function TripDetailClient({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="trip-detail-flow">
       {!isDriver && !hasBooked && isScheduled && (
         <GuideHint text={surfaceCopy.actionGuide} dismissible />
       )}
 
-      <div className="rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
-        <div className={`px-5 pt-5 pb-4 ${
+      <div className={`trip-detail-hero rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm overflow-hidden ${statusUi.cardClassName} ${isInProgress ? 'trip-detail-hero--live' : ''}`}>
+        <div className={`trip-detail-hero__top px-5 pt-5 pb-4 ${
           isCancelled
             ? 'bg-red-50 dark:bg-red-900/10'
             : isCompleted
               ? 'bg-emerald-50 dark:bg-emerald-900/10'
-              : 'bg-gradient-to-br from-sky-50 to-white dark:from-sky-900/20 dark:to-slate-900'
+              : isInProgress
+                ? 'trip-detail-hero__top--live'
+                : 'bg-gradient-to-br from-sky-50 to-white dark:from-sky-900/20 dark:to-slate-900'
         }`}>
           <div className="flex items-start justify-between gap-3 mb-4">
             <div>
@@ -761,18 +1062,28 @@ export default function TripDetailClient({
                 </p>
               )}
             </div>
-            <span className={`shrink-0 inline-flex items-center rounded-full px-3 py-1 text-xs font-bold text-white ${statusConfig.color}`}>
-              {statusConfig.label}
+            <span className={`shrink-0 inline-flex items-center rounded-full px-3 py-1 text-xs font-bold ${statusUi.chipClassName}`}>
+              {statusLabel}
             </span>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="flex flex-col items-center gap-1">
-              <div className="w-2.5 h-2.5 rounded-full bg-sky-500" />
-              <div className="w-px h-5 bg-slate-300 dark:bg-slate-600" />
-              <div className="w-2.5 h-2.5 rounded-full border-2 border-emerald-500" />
+          {isInProgress && (
+            <div className="trip-live-banner" role="status">
+              <span className="trip-live-banner__dot" aria-hidden="true" />
+              <div>
+                <strong>{surfaceCopy.liveTripTitle}</strong>
+                <span>{isDriver ? surfaceCopy.liveTripDriverDesc : surfaceCopy.liveTripRiderDesc}</span>
+              </div>
             </div>
-            <div className="flex-1 flex flex-col gap-3">
+          )}
+
+          <div className="trip-route-rail">
+            <div className="trip-route-rail__line" aria-hidden="true">
+              <span />
+              <i />
+              <span />
+            </div>
+            <div className="flex min-w-0 flex-col gap-3">
               <div>
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">
                   {copy.from}
@@ -780,6 +1091,29 @@ export default function TripDetailClient({
                 <p className="text-base font-bold text-slate-900 dark:text-slate-100 leading-snug" dir="auto">
                   {trip.origin_name}
                 </p>
+                {(pickupContext || trip.origin_meeting_point_source) && (
+                  <div className="mt-2 rounded-2xl border border-sky-100 bg-sky-50/80 px-3 py-2 text-start dark:border-sky-900/60 dark:bg-sky-950/25">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wide ${
+                        isTrustedPickup
+                          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/35 dark:text-emerald-300'
+                          : 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                      }`}>
+                        {pickupLabel}
+                      </span>
+                      {hasPickupCoordinates && (
+                        <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-black text-sky-700 dark:bg-slate-900 dark:text-sky-300">
+                          {pickupCopy.mapReady}
+                        </span>
+                      )}
+                    </div>
+                    {pickupContext && (
+                      <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300" dir="auto">
+                        {pickupContext}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
               <div>
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">
@@ -793,36 +1127,16 @@ export default function TripDetailClient({
           </div>
         </div>
 
-        <div className="px-5 py-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3 min-w-0">
-            {trip.driver?.avatar_url ? (
-              <Image
-                src={trip.driver.avatar_url}
-                alt={copy.driver}
-                width={44}
-                height={44}
-                className="w-11 h-11 rounded-full border-2 border-slate-100 dark:border-slate-700 object-cover shrink-0"
-              />
-            ) : (
-              <div className="w-11 h-11 rounded-full bg-sky-100 dark:bg-sky-900/30 border-2 border-slate-100 dark:border-slate-800 flex items-center justify-center text-sm font-bold text-sky-600 dark:text-sky-400 shrink-0">
-                {(trip.driver?.display_name?.[0] ?? copy.driver[0] ?? 'D').toUpperCase()}
-              </div>
-            )}
-            <div className="min-w-0">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                {copy.driver}
-              </p>
-              <p className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate" dir="auto">
-                {trip.driver?.display_name ?? copy.communityMember}
-              </p>
-            </div>
-          </div>
-          <DriverTrustSummary
+        <div className="px-5 py-4 border-t border-slate-100 dark:border-slate-800">
+          <DriverTrustPassport
+            driverName={trip.driver?.display_name ?? copy.communityMember}
+            avatarUrl={trip.driver?.avatar_url}
             ratingAvg={trip.driver?.rating_avg}
             ratingCount={trip.driver?.rating_count}
             completedDrives={trip.driver_completed_drives ?? 0}
             trustProfile={trip.driver_trust_profile ?? null}
             variant="full"
+            className="driver-trust-passport--detail"
           />
         </div>
 
@@ -864,7 +1178,178 @@ export default function TripDetailClient({
         </div>
       </div>
 
-      <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4 space-y-3">
+      {showPreDepartureProtocol && (
+        <section
+          data-testid="pre-departure-confirmation"
+          aria-live="polite"
+          className={`rounded-3xl border p-5 shadow-sm ${
+            preDepartureWindow.isOpen
+              ? 'border-emerald-200 bg-emerald-50/80 dark:border-emerald-800/70 dark:bg-emerald-900/15'
+              : preDepartureWindow.isExpired
+                ? 'border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/70'
+                : 'border-amber-200 bg-amber-50/80 dark:border-amber-800/70 dark:bg-amber-900/15'
+          }`}
+        >
+          <div className="flex items-start gap-3">
+            <div
+              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${
+                preDepartureWindow.isOpen
+                  ? 'bg-emerald-600 text-white motion-safe:animate-pulse'
+                  : preDepartureWindow.isExpired
+                    ? 'bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
+                    : 'bg-amber-500 text-white'
+              }`}
+              aria-hidden="true"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 6 9 17l-5-5" />
+              </svg>
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div>
+                  <p className="text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400">
+                    {preDepartureCopy.eyebrow}
+                  </p>
+                  <h2 className="mt-1 text-lg font-black text-slate-950 dark:text-slate-50">
+                    {preDepartureCopy.title}
+                  </h2>
+                </div>
+                <div className="text-start sm:text-end">
+                  <p className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                    {preDepartureWindow.isBeforeWindow
+                      ? preDepartureCopy.opensIn(preDepartureWindow.minutesUntilOpen)
+                      : preDepartureWindow.isExpired
+                        ? preDepartureCopy.status.expired
+                        : preDepartureCopy.leavesIn(preDepartureWindow.minutesUntilDeparture)}
+                  </p>
+                  <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">
+                    {preDepartureCopy.exactDeparture(formatLocalizedTime(lang, trip.departure_time))}
+                  </p>
+                </div>
+              </div>
+
+              <p className="mt-3 text-sm leading-relaxed text-slate-700 dark:text-slate-300">
+                {preDepartureWindow.isExpired
+                  ? preDepartureCopy.expiredDesc
+                  : preDepartureWindow.isBeforeWindow
+                    ? preDepartureCopy.opensIn(preDepartureWindow.minutesUntilOpen)
+                    : preDepartureCopy.activeDesc}
+              </p>
+
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <div className="rounded-2xl border border-white/70 bg-white/75 p-3 dark:border-slate-800 dark:bg-slate-950/35">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      {trip.driver?.avatar_url ? (
+                        <Image
+                          src={trip.driver.avatar_url}
+                          alt={trip.driver.display_name ?? preDepartureCopy.driver}
+                          width={32}
+                          height={32}
+                          className="h-8 w-8 rounded-full border border-white object-cover shadow-sm dark:border-slate-700"
+                        />
+                      ) : (
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-xs font-black text-white dark:bg-slate-100 dark:text-slate-900">
+                          {getParticipantInitial(trip.driver?.display_name, 'D')}
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-bold uppercase text-slate-400">
+                          {preDepartureCopy.driver}
+                        </p>
+                        <p className="truncate text-sm font-bold text-slate-900 dark:text-slate-100" dir="auto">
+                          {trip.driver?.display_name ?? copy.communityMember}
+                        </p>
+                      </div>
+                    </div>
+                    <PreDepartureStatusPill
+                      state={driverPreDepartureState}
+                      label={preDepartureCopy.status[driverPreDepartureState]}
+                    />
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-white/70 bg-white/75 p-3 dark:border-slate-800 dark:bg-slate-950/35">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-[10px] font-bold uppercase text-slate-400">
+                        {preDepartureCopy.riders}
+                      </p>
+                      <p className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                        {confirmedBookings.length > 0
+                          ? preDepartureCopy.riderProgress(readyRiderCount, confirmedBookings.length)
+                          : preDepartureCopy.noRiders}
+                      </p>
+                    </div>
+                    {confirmedBookings.length > 0 && (
+                      <div className="flex flex-row-reverse gap-1.5" aria-hidden="true">
+                        {riderPreDepartureItems.map((item) => {
+                          const state = item.state;
+                          const classes = getPreDepartureStatusClasses(state);
+                          return (
+                            <span
+                              key={item.id}
+                              className={`h-2.5 w-2.5 rounded-full ring-2 ring-white dark:ring-slate-950 ${classes.dot}`}
+                            />
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                  {preDepartureAttention && (
+                    <p className="mt-2 text-xs font-semibold text-red-700 dark:text-red-300">
+                      {preDepartureAttention}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {showPreDepartureStates && !isDriver && hasBooked && (
+                <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl border border-white/70 bg-white/75 p-3 dark:border-slate-800 dark:bg-slate-950/35">
+                  <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
+                    {preDepartureCopy.you}
+                  </span>
+                  <PreDepartureStatusPill
+                    state={myPreDepartureState}
+                    label={preDepartureCopy.status[myPreDepartureState]}
+                  />
+                </div>
+              )}
+
+              {canActOnPreDeparture && (
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handlePreDepartureConfirmation('confirmed')}
+                    disabled={
+                      preDepartureLoading !== null || myPreDepartureState === 'confirmed'
+                    }
+                    className="rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-black text-white shadow-sm transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-55 dark:bg-emerald-500 dark:hover:bg-emerald-600"
+                  >
+                    {preDepartureLoading === 'confirmed' ? t('loading') : preDepartureCopy.ready}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handlePreDepartureConfirmation('not_confirmed')}
+                    disabled={
+                      preDepartureLoading !== null || myPreDepartureState === 'not_confirmed'
+                    }
+                    className="rounded-2xl border border-red-200 bg-white px-4 py-3 text-sm font-black text-red-700 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-55 dark:border-red-800 dark:bg-slate-950/60 dark:text-red-300 dark:hover:bg-red-900/20"
+                  >
+                    {preDepartureLoading === 'not_confirmed'
+                      ? t('loading')
+                      : preDepartureCopy.notReady}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
+
+      <div className="trip-info-panel space-y-3">
           <div>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">
               {trustCopy.rideDetails}
@@ -874,8 +1359,9 @@ export default function TripDetailClient({
             </p>
           </div>
 
+          <div className="trip-info-grid">
           {driverGenderLabel && (
-            <div>
+            <div className="trip-info-item">
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">
                 {trustCopy.driverGender}
               </p>
@@ -885,7 +1371,7 @@ export default function TripDetailClient({
             </div>
           )}
 
-          <div>
+          <div className="trip-info-item">
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">
               {trustCopy.passengerPreference}
             </p>
@@ -895,7 +1381,7 @@ export default function TripDetailClient({
           </div>
 
           {vehicleDetails && (
-            <div>
+            <div className="trip-info-item">
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">
                 {trustCopy.vehicle}
               </p>
@@ -905,9 +1391,36 @@ export default function TripDetailClient({
             </div>
           )}
 
+          {(pickupContext || trip.origin_meeting_point_source || hasPickupCoordinates) && (
+            <div className="trip-info-item">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">
+                {pickupCopy.pickupContext}
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className={`rounded-full px-3 py-1 text-xs font-black ${
+                  isTrustedPickup
+                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/35 dark:text-emerald-300'
+                    : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200'
+                }`}>
+                  {pickupLabel}
+                </span>
+                {hasPickupCoordinates && (
+                  <span className="rounded-full bg-sky-50 px-3 py-1 text-xs font-bold text-sky-700 dark:bg-sky-950/35 dark:text-sky-300">
+                    {pickupCopy.mapReady}
+                  </span>
+                )}
+              </div>
+              {pickupContext && (
+                <p className="mt-2 text-sm leading-relaxed text-slate-700 dark:text-slate-300" dir="auto">
+                  {pickupContext}
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Recurring schedule row — only shown for recurring trips */}
           {isRecurring && recurringSummary && (
-            <div>
+            <div className="trip-info-item">
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">
                 {recurringCopy.schedule}
               </p>
@@ -918,7 +1431,7 @@ export default function TripDetailClient({
           )}
 
           {driverNote && (
-            <div>
+            <div className="trip-info-item">
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">
                 {trustCopy.driverNote}
               </p>
@@ -928,7 +1441,7 @@ export default function TripDetailClient({
             </div>
           )}
 
-          <div>
+          <div className="trip-info-item">
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">
               {trustCopy.tripRules}
             </p>
@@ -951,7 +1464,7 @@ export default function TripDetailClient({
           </div>
 
           {additionalRideNote && (
-            <div>
+            <div className="trip-info-item">
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">
                 {trustCopy.additionalNote}
               </p>
@@ -960,6 +1473,7 @@ export default function TripDetailClient({
               </p>
             </div>
           )}
+          </div>
       </div>
 
       {showPassengerPreferenceGate && (
@@ -976,41 +1490,49 @@ export default function TripDetailClient({
         </div>
       )}
 
-      <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 p-4 space-y-2">
-        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-          {trustCopy.howCoordinationWorks}
-        </p>
-        <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
-          {trustCopy.coordinationDescription}
-        </p>
-        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-          {trustCopy.supportDescription}
-        </p>
-        {trip.price_cents != null && (
-          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-            {trustCopy.pricingDescription}
+      <div className="notice-card notice-card--calm">
+        <span className="notice-card__icon" aria-hidden="true">?</span>
+        <div className="notice-card__content">
+          <p className="notice-card__title">
+            {trustCopy.howCoordinationWorks}
           </p>
-        )}
+          <p className="notice-card__body">
+            {trustCopy.coordinationDescription}
+          </p>
+          <p className="notice-card__meta">
+            {trustCopy.supportDescription}
+          </p>
+          {trip.price_cents != null && (
+            <p className="notice-card__meta">
+              {trustCopy.pricingDescription}
+            </p>
+          )}
+        </div>
       </div>
 
-      <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 p-4">
-        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">
-          {copy.whatSignalsMean}
-        </p>
-        <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
-          {copy.signalsDescription}
-        </p>
+      <div className="notice-card">
+        <span className="notice-card__icon" aria-hidden="true">i</span>
+        <div className="notice-card__content">
+          <p className="notice-card__title">
+            {copy.whatSignalsMean}
+          </p>
+          <p className="notice-card__body">
+            {copy.signalsDescription}
+          </p>
+        </div>
       </div>
 
       {notice && (
-        <div className="rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 p-4">
-          <p className="text-sm font-medium text-emerald-800 dark:text-emerald-300">{notice}</p>
+        <div className="guide-hint guide-hint--success" role="status">
+          <span className="guide-hint__icon" aria-hidden="true">OK</span>
+          <span className="guide-hint__text">{notice}</span>
         </div>
       )}
 
       {error && (
-        <div className="rounded-2xl bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-900/50 p-4">
-          <p className="text-sm font-medium text-red-700 dark:text-red-400">{error}</p>
+        <div className="guide-hint guide-hint--warning" role="alert">
+          <span className="guide-hint__icon" aria-hidden="true">!</span>
+          <span className="guide-hint__text">{error}</span>
         </div>
       )}
 
@@ -1044,7 +1566,7 @@ export default function TripDetailClient({
 
       {canBook && (
         !showBookConfirm ? (
-          <div className="rounded-2xl border border-sky-200 dark:border-sky-800 bg-white dark:bg-slate-900 p-4 space-y-4 shadow-sm">
+          <div className="booking-card space-y-4">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-[10px] font-bold text-sky-500 uppercase tracking-widest mb-1">
@@ -1081,13 +1603,13 @@ export default function TripDetailClient({
                 setShowBookConfirm(true);
               }}
               data-testid="start-booking-button"
-              className="w-full rounded-2xl bg-sky-600 dark:bg-sky-500 px-4 py-4 text-base font-bold text-white hover:bg-sky-700 dark:hover:bg-sky-600 transition-colors btn-press shadow-md"
+              className="booking-primary-button w-full rounded-2xl bg-sky-600 dark:bg-sky-500 px-4 py-4 text-base font-bold text-white hover:bg-sky-700 dark:hover:bg-sky-600 transition-colors btn-press shadow-md"
             >
               {t('book_seat')}
             </button>
           </div>
         ) : (
-          <div className="rounded-2xl border-2 border-sky-200 dark:border-sky-800 bg-sky-50 dark:bg-sky-900/30 p-5 space-y-4">
+          <div className="booking-card space-y-4">
             <div>
               <p className="text-sm font-bold text-sky-900 dark:text-sky-100 mb-1">{t('confirm_booking_title')}</p>
               <p className="text-xs text-sky-700 dark:text-sky-300 leading-relaxed">
@@ -1187,7 +1709,7 @@ export default function TripDetailClient({
                 </p>
               </div>
 
-              <label className="flex items-start gap-3 text-sm text-slate-700 dark:text-slate-300">
+              <label className="booking-ack flex items-start gap-3 text-sm text-slate-700 dark:text-slate-300">
                 <input
                   id="ack-trip-rules"
                   type="checkbox"
@@ -1203,7 +1725,7 @@ export default function TripDetailClient({
                 <span>{trustCopy.ackTripRules}</span>
               </label>
 
-              <label className="flex items-start gap-3 text-sm text-slate-700 dark:text-slate-300">
+              <label className="booking-ack flex items-start gap-3 text-sm text-slate-700 dark:text-slate-300">
                 <input
                   id="ack-platform-role"
                   type="checkbox"
@@ -1219,7 +1741,7 @@ export default function TripDetailClient({
                 <span>{trustCopy.ackPlatformRole}</span>
               </label>
 
-              <label className="flex items-start gap-3 text-sm text-slate-700 dark:text-slate-300">
+              <label className="booking-ack flex items-start gap-3 text-sm text-slate-700 dark:text-slate-300">
                 <input
                   id="ack-support-path"
                   type="checkbox"
@@ -1240,7 +1762,7 @@ export default function TripDetailClient({
                 onClick={handleBook}
                 disabled={loading || !bookingAcksComplete}
                 data-testid="confirm-booking-button"
-                className="flex-1 rounded-xl bg-sky-600 dark:bg-sky-500 px-4 py-3 font-bold text-white hover:bg-sky-700 dark:hover:bg-sky-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="booking-primary-button flex-1 rounded-xl bg-sky-600 dark:bg-sky-500 px-4 py-3 font-bold text-white hover:bg-sky-700 dark:hover:bg-sky-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {loading ? t('booking') : copy.confirmBooking}
               </button>
@@ -1440,6 +1962,15 @@ export default function TripDetailClient({
               {bookings.map((booking) => {
                 const isPassengerCancelled = booking.status === 'cancelled';
                 const passengerName = booking.passenger?.display_name ?? copy.communityMember;
+                const passengerPreDepartureState = getPreDepartureConfirmationState(
+                  booking.pre_departure_confirmation,
+                  trip,
+                  preDepartureNow
+                );
+                const showPassengerPreDepartureState =
+                  showPreDepartureStates &&
+                  !isPassengerCancelled &&
+                  (isDriver || booking.passenger_id === currentUserId);
                 return (
                   <div key={booking.id} className={`flex items-center justify-between py-3 first:pt-0 last:pb-0 ${isPassengerCancelled ? 'opacity-60' : ''}`}>
                     <div className="flex items-center gap-3">
@@ -1470,6 +2001,15 @@ export default function TripDetailClient({
                         {isPassengerCancelled && (
                           <span className="ml-2 text-[10px] font-bold text-red-600 bg-red-100 dark:bg-red-900/20 px-1.5 py-0.5 rounded">
                             {t('cancelled')}
+                          </span>
+                        )}
+                        {showPassengerPreDepartureState && (
+                          <span className="ms-2">
+                            <PreDepartureStatusPill
+                              state={passengerPreDepartureState}
+                              label={preDepartureCopy.status[passengerPreDepartureState]}
+                              compact
+                            />
                           </span>
                         )}
                         {isPassengerCancelled && booking.cancelled_at && (

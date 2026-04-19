@@ -4,6 +4,7 @@
 .next/
 node_modules/
 tsconfig.tsbuildinfo
+.next-dev-*.log
 
 # Local Firebase CLI cache and debug logs — not part of the app
 .firebase/

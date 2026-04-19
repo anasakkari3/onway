@@ -1,6 +1,7 @@
 import { requireCompletedProfile } from '@/lib/auth/onboarding';
 import { getMyCommunities, listCommunities } from '@/lib/services/community';
 import { getMyCommunityMembershipState } from '@/lib/services/community-requests';
+import { getActiveTripCountsForCommunities } from '@/lib/services/trip';
 import CommunityExplorer from './CommunityExplorer';
 
 export default async function CommunityPage() {
@@ -46,11 +47,15 @@ export default async function CommunityPage() {
       };
     })
   );
+  const activeRideCounts = await getActiveTripCountsForCommunities(
+    listedCommunities.map((community) => community.id)
+  );
 
   return (
     <CommunityExplorer
       joinedCommunities={joinedCommunities}
       exploreCommunities={exploreCommunities}
+      activeRideCounts={Object.fromEntries(activeRideCounts)}
     />
   );
 }
