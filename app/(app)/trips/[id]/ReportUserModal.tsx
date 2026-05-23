@@ -187,7 +187,7 @@ export default function ReportUserModal({
         {success ? (
           <div className="p-8 text-center flex flex-col items-center justify-center" aria-live="polite">
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 mb-6">
-              OK
+              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>
             </div>
             <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-2">{copy.reportSubmitted}</h2>
             <p className="text-sm text-slate-500 dark:text-slate-400 mb-8 leading-relaxed">

@@ -49,8 +49,8 @@ const COPY = {
     labelUniversity: 'אוניברסיטה',
     labelCustom: 'אחר',
     deleteAriaLabel: (name: string) => `הסר ${name}`,
-    fillOrigin: '→ מוצא',
-    fillDestination: '→ יעד',
+    fillOrigin: '← מוצא',
+    fillDestination: '← יעד',
   },
 } as const;
 
@@ -172,7 +172,7 @@ export default function SavedPlaceChips({
             <button
               type="button"
               onClick={() => onSelect(place.name)}
-              className="flex items-center gap-1.5 rounded-lg border border-[var(--border-soft)] bg-[var(--surface)] py-1.5 pl-3 pr-7 text-sm font-semibold text-[var(--muted-strong)] shadow-sm transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)]"
+              className="flex items-center gap-1.5 rounded-lg border border-[var(--border-soft)] bg-[var(--surface)] py-1.5 ps-3 pe-7 text-sm font-semibold text-[var(--muted-strong)] shadow-sm transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)]"
             >
               <span className="text-base leading-none">{place.emoji}</span>
               <span dir="auto">{place.name}</span>
@@ -182,7 +182,7 @@ export default function SavedPlaceChips({
               type="button"
               aria-label={copy.deleteAriaLabel(place.name)}
               onClick={() => handleDelete(place.id)}
-              className="absolute right-1.5 top-1/2 hidden h-4 w-4 -translate-y-1/2 items-center justify-center rounded-lg bg-[var(--surface-muted)] text-[10px] font-bold text-[var(--muted)] transition-colors hover:bg-red-100 hover:text-red-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400 group-hover:flex"
+              className="absolute end-1.5 top-1/2 hidden h-4 w-4 -translate-y-1/2 items-center justify-center rounded-lg bg-[var(--surface-muted)] text-[10px] font-bold text-[var(--muted)] transition-colors hover:bg-red-100 hover:text-red-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400 group-hover:flex"
             >
               ✕
             </button>

@@ -62,6 +62,7 @@ type TimelineState = {
 
 const TIME_COPY: Record<Lang, {
   at: string;
+  to: string;
   departingSoon: string;
   full: string;
   recurring: string;
@@ -78,6 +79,7 @@ const TIME_COPY: Record<Lang, {
 }> = {
   en: {
     at: 'at',
+    to: 'to',
     departingSoon: 'Soon',
     full: 'Full',
     recurring: 'Recurring',
@@ -99,6 +101,7 @@ const TIME_COPY: Record<Lang, {
     completed: 'مكتملة',
     cancelled: 'ملغاة',
     at: 'الساعة',
+    to: 'إلى',
     departingSoon: 'قريبًا',
     full: 'ممتلئة',
     recurring: 'متكررة',
@@ -115,6 +118,7 @@ const TIME_COPY: Record<Lang, {
     completed: 'הושלמה',
     cancelled: 'בוטלה',
     at: 'בשעה',
+    to: 'אל',
     departingSoon: 'בקרוב',
     full: 'מלא',
     recurring: 'קבועה',
@@ -307,6 +311,8 @@ function CardInner({
   const isLive = timeline.kind === 'live';
   const isUnavailable = (locked || ride.seatsAvailable <= 0) && !isLive;
   const hintText = ride.urgency || ride.activityHint || ride.communityName || timeline.status;
+  const lang = getSafeLang(ride.lang);
+  const toWord = TIME_COPY[lang].to;
 
   return (
     <>
@@ -323,7 +329,7 @@ function CardInner({
         </span>
       </div>
 
-      <div className="decision-card__route" aria-label={`${ride.origin} to ${ride.destination}`}>
+      <div className="decision-card__route" aria-label={`${ride.origin} ${toWord} ${ride.destination}`}>
         <div className="decision-card__route-line" aria-hidden="true">
           <span />
           <i />

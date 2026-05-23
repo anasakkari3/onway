@@ -182,12 +182,17 @@ export default async function ProfilePage() {
                   >
                     <div
                       className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-sm ${statusUi.accentClassName}`}
+                      aria-hidden="true"
                     >
-                      {trip.status === 'completed' ? 'OK' : 'X'}
+                      {trip.status === 'completed' ? (
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+                      ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                      )}
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium text-slate-900 dark:text-slate-100" dir="auto">
-                        {trip.origin_name} → {trip.destination_name}
+                        {trip.origin_name} <span className="inline-block rtl:rotate-180">→</span> {trip.destination_name}
                       </p>
                       <div className="mt-0.5 flex items-center gap-2">
                         <span className="text-xs text-slate-500 dark:text-slate-400">
@@ -199,7 +204,7 @@ export default async function ProfilePage() {
                           {statusUi.label}
                         </span>
                         {trip.driver && (
-                          <span className="text-xs text-slate-400 dark:text-slate-500">| {trip.driver.display_name ?? t('driver')}</span>
+                          <span className="text-xs text-slate-400 dark:text-slate-500" dir="auto">· {trip.driver.display_name ?? t('driver')}</span>
                         )}
                       </div>
                     </div>

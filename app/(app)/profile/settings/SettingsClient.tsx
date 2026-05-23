@@ -286,7 +286,7 @@ export default function SettingsClient({
           <button
             onClick={handleSignOut}
             disabled={signingOut}
-            className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors text-left"
+            className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors text-start"
             dir={lang === 'ar' || lang === 'he' ? 'rtl' : 'ltr'}
           >
             <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400">

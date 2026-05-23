@@ -10,6 +10,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslation } from '@/lib/i18n/LanguageProvider';
 
 type Variant = 'tip' | 'info' | 'success' | 'warning';
 
@@ -21,6 +22,12 @@ type Props = {
   className?: string;
 };
 
+const DISMISS_LABEL: Record<string, string> = {
+  en: 'Dismiss hint',
+  ar: 'إغلاق التنويه',
+  he: 'סגרו את הרמז',
+};
+
 export default function GuideHint({
   text,
   icon = 'i',
@@ -28,9 +35,12 @@ export default function GuideHint({
   dismissible = false,
   className = '',
 }: Props) {
+  const { lang } = useTranslation();
   const [dismissed, setDismissed] = useState(false);
 
   if (dismissed) return null;
+
+  const dismissLabel = DISMISS_LABEL[lang] ?? DISMISS_LABEL.en;
 
   return (
     <div
@@ -43,10 +53,10 @@ export default function GuideHint({
         <button
           type="button"
           onClick={() => setDismissed(true)}
-          aria-label="إغلاق التنويه"
+          aria-label={dismissLabel}
           className="guide-hint__dismiss"
         >
-          x
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
         </button>
       )}
     </div>

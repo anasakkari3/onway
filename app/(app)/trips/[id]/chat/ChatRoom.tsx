@@ -312,7 +312,7 @@ export default function ChatRoom({
                         isMe
                       )}
                     </span>
-                    <span className="text-[10px] opacity-70 ml-1">{timeString}</span>
+                    <span className="text-[10px] opacity-70 ms-1">{timeString}</span>
                   </div>
                 </li>
               );
@@ -335,7 +335,7 @@ export default function ChatRoom({
                       {senderName}
                     </button>
                   )}
-                  <span>|</span>
+                  <span aria-hidden="true">·</span>
                   <span>{timeString}</span>
                 </div>
                 <div

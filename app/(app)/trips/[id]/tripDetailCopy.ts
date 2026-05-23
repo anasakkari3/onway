@@ -332,7 +332,7 @@ export function localizeTripActionError(message: string, lang: Lang) {
   }
   if (normalized.includes('acknowledgements are required') || normalized.includes('booking acknowledgements')) {
     if (lang === 'ar') return 'يجب الموافقة على شروط الحجز الثلاثة قبل تأكيد الحجز.';
-    if (lang === 'he') return copy.errors.genericBooking;
+    if (lang === 'he') return 'יש לאשר את כל ההצהרות לפני אישור ההזמנה.';
     return 'Booking acknowledgements are required before confirming.';
   }
   if (normalized.includes('unauthorized') || normalized.includes('permission')) {

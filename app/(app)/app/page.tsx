@@ -339,7 +339,7 @@ export default async function HomePage(props: {
                   className="surface-card shrink-0 flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-bold text-[var(--muted-strong)] transition-colors hover:bg-[var(--primary-light)]"
                 >
                   <span dir="auto">{route.origin}</span>
-                  <span className="px-0.5 text-[var(--accent-strong)] opacity-80">→</span>
+                  <span className="inline-block px-0.5 text-[var(--accent-strong)] opacity-80 rtl:rotate-180">→</span>
                   <span dir="auto">{route.dest}</span>
                 </Link>
               ))}
@@ -432,7 +432,9 @@ export default async function HomePage(props: {
                       return (
                         <Link key={trip.id} href={`/trips/${trip.id}`} className={`route-card card-hover block rounded-lg p-4 ${statusUi.cardClassName}`}>
                           <div className="flex items-center gap-3">
-                            <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg text-xl ${statusUi.accentClassName}`}>T</div>
+                            <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg ${statusUi.accentClassName}`}>
+                              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M2 9a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v3a1.5 1.5 0 0 0 0 3v3a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-3a1.5 1.5 0 0 0 0-3Z"/><path d="M13 7v10"/></svg>
+                            </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 justify-between">
                                 <p className="mb-0.5 text-xs font-black text-[var(--primary)]">{copy.bookedRole}</p>
@@ -440,7 +442,7 @@ export default async function HomePage(props: {
                                   {statusUi.label}
                                 </span>
                               </div>
-                              <p className="truncate font-bold text-[var(--foreground)]" dir="auto">{trip.origin_name} → {trip.destination_name}</p>
+                              <p className="truncate font-bold text-[var(--foreground)]" dir="auto">{trip.origin_name} <span className="inline-block rtl:rotate-180">→</span> {trip.destination_name}</p>
                               <div className="mt-1 flex flex-wrap items-center gap-2">
                                 <CommunityBadge name={trip.community_name} type={trip.community_type} compact />
                                 <span className="text-xs font-medium text-[var(--muted)]">
@@ -462,7 +464,9 @@ export default async function HomePage(props: {
                       return (
                         <Link key={trip.id} href={`/trips/${trip.id}`} className={`route-card card-hover block rounded-lg p-4 ${statusUi.cardClassName}`}>
                           <div className="flex items-center gap-3">
-                            <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg text-xl ${statusUi.accentClassName}`}>C</div>
+                            <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg ${statusUi.accentClassName}`}>
+                              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M14 16H9m10 0h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 9.6 16 9 16 9s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 11v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="16" r="2"/><path d="M9 16h6"/><circle cx="17" cy="16" r="2"/></svg>
+                            </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 justify-between">
                                 <p className="mb-0.5 text-xs font-black text-[var(--success)]">{copy.drivingRole}</p>
@@ -470,7 +474,7 @@ export default async function HomePage(props: {
                                   {statusUi.label}
                                 </span>
                               </div>
-                              <p className="truncate font-bold text-[var(--foreground)]" dir="auto">{trip.origin_name} → {trip.destination_name}</p>
+                              <p className="truncate font-bold text-[var(--foreground)]" dir="auto">{trip.origin_name} <span className="inline-block rtl:rotate-180">→</span> {trip.destination_name}</p>
                               <div className="mt-1 flex flex-wrap items-center gap-2">
                                 <CommunityBadge name={trip.community_name} type={trip.community_type} compact />
                                 <span className="text-xs font-medium text-[var(--muted)]">
