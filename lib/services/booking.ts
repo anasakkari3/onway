@@ -280,8 +280,8 @@ export async function bookSeat(
       await createNotification({
         userId: driverId,
         type: 'booking',
-        title: 'New Booking',
-        body: `${result.booking.passenger?.display_name ?? 'Someone'} booked a seat on your trip.`,
+        title: 'New seat booked',
+        body: `${result.booking.passenger?.display_name ?? 'Someone'} reserved a seat on your trip.`,
         linkUrl: `/trips/${tripId}`
       });
     }
@@ -471,7 +471,7 @@ export async function cancelBooking(bookingId: string) {
         userId: notifyId,
         type: 'cancellation',
         title: 'Booking Cancelled',
-        body: `${result.cancellerDisplayName} cancelled ${user.id === result.driverId ? 'your booking' : `their booking for ${result.seats} seat(s)`}.`,
+        body: `${result.cancellerDisplayName} cancelled ${user.id === result.driverId ? 'your booking' : `their booking for ${result.seats} ${result.seats === 1 ? 'seat' : 'seats'}`}.`,
         linkUrl: `/trips/${result.tripId}`
       });
     }

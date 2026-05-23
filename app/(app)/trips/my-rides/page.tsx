@@ -190,7 +190,7 @@ export default async function MyRidesPage() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 justify-between">
                             <p className="font-semibold text-slate-900 dark:text-slate-100 truncate" dir="auto">
-                              {trip.origin_name} → {trip.destination_name}
+                              {trip.origin_name} <span className="inline-block rtl:rotate-180">→</span> {trip.destination_name}
                             </p>
                             <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${statusUi.chipClassName}`}>
                               {statusUi.label}
@@ -255,7 +255,7 @@ export default async function MyRidesPage() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 justify-between">
                             <p className="font-semibold text-slate-900 dark:text-slate-100 truncate" dir="auto">
-                              {trip.origin_name} → {trip.destination_name}
+                              {trip.origin_name} <span className="inline-block rtl:rotate-180">→</span> {trip.destination_name}
                             </p>
                             <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${statusUi.chipClassName}`}>
                               {statusUi.label}

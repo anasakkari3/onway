@@ -236,8 +236,26 @@ export default function ChatRoom({
         } else {
           setSendError(copy.sendFailed);
         }
+      } else if (lang === 'he') {
+        if (errMsg.includes('blocked')) {
+          setSendError('לא ניתן לשלוח הודעות כי אחד המשתתפים חסום.');
+        } else if (errMsg.includes('read-only') || errMsg.includes('read_only')) {
+          setSendError('הנסיעה הזאת במצב קריאה בלבד ולא ניתן לשלוח הודעות כרגע.');
+        } else if (errMsg.includes('unauthorized')) {
+          setSendError('אין לך הרשאה לשלוח הודעות בנסיעה הזאת.');
+        } else {
+          setSendError(copy.sendFailed);
+        }
       } else {
-        setSendError(copy.sendFailed);
+        if (errMsg.includes('blocked')) {
+          setSendError('Messaging is unavailable because a participant is blocked.');
+        } else if (errMsg.includes('read-only') || errMsg.includes('read_only')) {
+          setSendError('This trip is read-only — messaging is not available right now.');
+        } else if (errMsg.includes('unauthorized')) {
+          setSendError('You are not authorised to send messages on this trip.');
+        } else {
+          setSendError(copy.sendFailed);
+        }
       }
     } finally {
       setLoading(false);

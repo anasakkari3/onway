@@ -311,6 +311,7 @@ export default function ProfileForm({
           <input
             type="number"
             min="1"
+            max="120"
             step="1"
             value={age}
             onChange={(e) => { setAge(e.target.value); setSuccess(false); }}

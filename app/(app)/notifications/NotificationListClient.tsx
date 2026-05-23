@@ -62,15 +62,17 @@ export default function NotificationListClient({
 
   const handleMarkAsRead = async (id: string, e: React.MouseEvent) => {
     e.preventDefault();
+    const previous = notifications;
+    setNotifications((prev) =>
+      prev.map((notification) =>
+        notification.id === id ? { ...notification, is_read: true } : notification
+      )
+    );
     try {
-      setNotifications((prev) =>
-        prev.map((notification) =>
-          notification.id === id ? { ...notification, is_read: true } : notification
-        )
-      );
       await markAsRead(id);
     } catch {
-      // non-critical
+      // Rollback optimistic update on failure
+      setNotifications(previous);
     }
   };
 
@@ -173,7 +175,7 @@ export default function NotificationListClient({
                            notification.type !== 'message' &&
                            notification.type !== 'booking' &&
                            notification.type !== 'cancellation' && t('notif_cta_view')}
-                          {' '}→
+                          {' '}<span className="inline-block rtl:rotate-180">→</span>
                         </span>
                       )}
                     </div>

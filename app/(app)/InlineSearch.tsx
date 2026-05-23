@@ -159,7 +159,7 @@ export default function InlineSearch({
           </select>
         </div>
 
-        <div className="flex items-center gap-2 pl-2 pt-2 sm:pl-0 sm:pr-1 sm:pt-0">
+        <div className="flex items-center gap-2 ps-2 pt-2 sm:ps-0 sm:pe-1 sm:pt-0">
           {hasActiveSearch && (
             <button
               type="button"

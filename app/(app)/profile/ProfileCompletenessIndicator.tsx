@@ -125,7 +125,7 @@ export default function ProfileCompletenessIndicator({
               }`}
               aria-hidden="true"
             >
-              {field.complete ? '+' : '-'}
+              {field.complete ? '✓' : '✕'}
             </span>
             <span className={field.complete ? 'text-slate-500 dark:text-slate-400' : 'text-slate-700 dark:text-slate-300'}>
               {field.label}

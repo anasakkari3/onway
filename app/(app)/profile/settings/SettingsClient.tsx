@@ -19,6 +19,14 @@ const COPY = {
     emailNotificationsDesc: 'Get important ride updates by email, such as booking changes, trip updates, and new messages.',
     emailNotificationsOn: 'On',
     emailNotificationsOff: 'Off',
+    emailPreferenceLabels: [
+      { key: 'booking_emails' as const, title: 'Bookings', description: 'New bookings and seat confirmations.' },
+      { key: 'cancellation_emails' as const, title: 'Cancellations', description: 'Trip or seat cancellations that affect you.' },
+      { key: 'chat_emails' as const, title: 'Trip chat', description: 'Messages from active trips you joined.' },
+      { key: 'route_alert_emails' as const, title: 'Route alerts', description: 'A new ride matches a route you saved.' },
+      { key: 'system_emails' as const, title: 'System updates', description: 'Admin decisions and important account updates.' },
+      { key: 'marketing_emails' as const, title: 'Marketing', description: 'Product news and non-urgent announcements.' },
+    ],
   },
   ar: {
     personalDetailsNote: 'تتم إدارة التفاصيل الشخصية من صفحة الملف الشخصي. حافظ عليها واضحة حتى يتمكن السائقون والركاب من التعرف عليك والتنسيق معك.',
@@ -26,6 +34,14 @@ const COPY = {
     emailNotificationsDesc: 'استقبل أهم تحديثات الرحلات على بريدك، مثل تغييرات الحجز وتحديثات الرحلة والرسائل الجديدة.',
     emailNotificationsOn: 'مفعلة',
     emailNotificationsOff: 'متوقفة',
+    emailPreferenceLabels: [
+      { key: 'booking_emails' as const, title: 'الحجوزات', description: 'حجوزات جديدة وتأكيدات المقاعد.' },
+      { key: 'cancellation_emails' as const, title: 'الإلغاءات', description: 'إلغاءات الرحلات أو المقاعد التي تؤثر عليك.' },
+      { key: 'chat_emails' as const, title: 'دردشة الرحلة', description: 'رسائل من الرحلات النشطة التي انضممت إليها.' },
+      { key: 'route_alert_emails' as const, title: 'تنبيهات المسار', description: 'نسيعة جديدة تتطابق مع مسار حفظته.' },
+      { key: 'system_emails' as const, title: 'تحديثات النظام', description: 'قرارات الإدارة والتحديثات المهمة للحساب.' },
+      { key: 'marketing_emails' as const, title: 'التسويق', description: 'أخبار المنتج والإعلانات غير العاجلة.' },
+    ],
   },
   he: {
     personalDetailsNote: 'הפרטים האישיים מנוהלים מדף הפרופיל. שמרו אותם ברורים כדי שנהגים ונוסעים יוכלו לזהות ולתאם איתכם.',
@@ -33,6 +49,14 @@ const COPY = {
     emailNotificationsDesc: 'קבלו עדכוני נסיעה חשובים באימייל, כמו שינויים בהזמנה, עדכוני נסיעה והודעות חדשות.',
     emailNotificationsOn: 'פעיל',
     emailNotificationsOff: 'כבוי',
+    emailPreferenceLabels: [
+      { key: 'booking_emails' as const, title: 'הזמנות', description: 'הזמנות חדשות ואישורי מושבים.' },
+      { key: 'cancellation_emails' as const, title: 'ביטולים', description: 'ביטולי נסיעות או מושבים שמשפיעים עליך.' },
+      { key: 'chat_emails' as const, title: "צ'אט הנסיעה", description: 'הודעות מנסיעות פעילות שהצטרפתם אליהן.' },
+      { key: 'route_alert_emails' as const, title: 'התראות מסלול', description: 'נסיעה חדשה שמתאימה למסלול ששמרתם.' },
+      { key: 'system_emails' as const, title: 'עדכוני מערכת', description: 'החלטות מנהל ועדכוני חשבון חשובים.' },
+      { key: 'marketing_emails' as const, title: 'שיווק', description: 'חדשות מוצרים והודעות לא דחופות.' },
+    ],
   },
 } as const;
 
@@ -41,42 +65,6 @@ type Props = {
   initialNotificationPreferences: NotificationPreferences;
 };
 
-const EMAIL_PREFERENCE_LABELS: Array<{
-  key: NotificationPreferenceKey;
-  title: string;
-  description: string;
-}> = [
-  {
-    key: 'booking_emails',
-    title: 'Bookings',
-    description: 'New bookings and seat confirmations.',
-  },
-  {
-    key: 'cancellation_emails',
-    title: 'Cancellations',
-    description: 'Trip or seat cancellations that affect you.',
-  },
-  {
-    key: 'chat_emails',
-    title: 'Trip chat',
-    description: 'Messages from active trips you joined.',
-  },
-  {
-    key: 'route_alert_emails',
-    title: 'Route alerts',
-    description: 'A new ride matches a route you saved.',
-  },
-  {
-    key: 'system_emails',
-    title: 'System updates',
-    description: 'Admin decisions and important account updates.',
-  },
-  {
-    key: 'marketing_emails',
-    title: 'Marketing',
-    description: 'Product news and non-urgent announcements.',
-  },
-];
 
 export default function SettingsClient({
   initialEmailNotificationsEnabled,
@@ -115,7 +103,7 @@ export default function SettingsClient({
     enabled: boolean
   ) => {
     const previousPreferences = emailPreferences;
-    setEmailNotificationsEnabled(true);
+    const previousEmailNotificationsEnabled = emailNotificationsEnabled;
     setEmailPreferences((current) => ({
       ...current,
       [key]: enabled,
@@ -126,6 +114,7 @@ export default function SettingsClient({
     } catch (err) {
       console.error('Email notification preference update failed:', err);
       setEmailPreferences(previousPreferences);
+      setEmailNotificationsEnabled(previousEmailNotificationsEnabled);
     } finally {
       setSavingPreferenceKey(null);
     }
@@ -249,7 +238,7 @@ export default function SettingsClient({
                 )}
               </div>
               <div className="mt-4 divide-y divide-slate-100 dark:divide-slate-800">
-                {EMAIL_PREFERENCE_LABELS.map((preference) => {
+                {copy.emailPreferenceLabels.map((preference) => {
                   const checked = emailNotificationsEnabled && emailPreferences[preference.key];
                   return (
                     <div key={preference.key} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">

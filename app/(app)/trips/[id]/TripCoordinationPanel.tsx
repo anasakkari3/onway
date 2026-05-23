@@ -174,7 +174,7 @@ export default function TripCoordinationPanel({
               type="button"
               onClick={() => handleSend(config.action)}
               disabled={loadingAction === config.action}
-              className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-left hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors disabled:opacity-60"
+              className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-start hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors disabled:opacity-60"
             >
               <div className="flex items-center justify-between gap-3">
                 <div>

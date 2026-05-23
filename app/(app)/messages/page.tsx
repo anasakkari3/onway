@@ -219,7 +219,7 @@ export default async function MessagesPage() {
                     <div className="min-w-0">
                       <CommunityBadge name={thread.communityName} type={thread.communityType} compact />
                       <h3 className="font-bold text-slate-900 dark:text-slate-100 truncate mt-1" dir="auto">
-                        {thread.tripOrigin} → {thread.tripDestination}
+                        {thread.tripOrigin} <span className="inline-block rtl:rotate-180">→</span> {thread.tripDestination}
                       </h3>
                     </div>
                     <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 whitespace-nowrap">
@@ -238,7 +238,7 @@ export default async function MessagesPage() {
                         </span>
                       )}
                       {msgTime && (
-                        <span className="text-xs font-semibold text-slate-400 whitespace-nowrap hidden sm:inline-block">
+                        <span className="text-xs font-semibold text-slate-400 whitespace-nowrap">
                           {msgTime}
                         </span>
                       )}

@@ -99,6 +99,7 @@ export default function RateForm({ tripId, driverId }: Props) {
         <textarea
           id="rating-feedback"
           rows={4}
+          maxLength={500}
           value={feedback}
           onChange={(e) => setFeedback(e.target.value)}
           placeholder={copy.feedbackPlaceholder}

@@ -1,4 +1,5 @@
 import { getAdminFirestore } from '@/lib/firebase/firestore-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 
 export type SavedPlaceLabel = 'home' | 'work' | 'university' | 'custom';
 
@@ -41,23 +42,25 @@ export async function addSavedPlace(
     emoji: emojiForLabel(place.label),
   };
   const ref = db.collection('users').doc(userId);
-  const snap = await ref.get();
-  const existing: SavedPlace[] = Array.isArray(snap.data()?.saved_places)
-    ? (snap.data()!.saved_places as SavedPlace[])
-    : [];
-  await ref.set({ saved_places: [...existing, newPlace] }, { merge: true });
+  // arrayUnion is atomic — concurrent adds never overwrite each other.
+  await ref.set({ saved_places: FieldValue.arrayUnion(newPlace) }, { merge: true });
   return newPlace;
 }
 
 export async function deleteSavedPlace(userId: string, placeId: string): Promise<void> {
   const db = getAdminFirestore();
   const ref = db.collection('users').doc(userId);
-  const snap = await ref.get();
-  const existing: SavedPlace[] = Array.isArray(snap.data()?.saved_places)
-    ? (snap.data()!.saved_places as SavedPlace[])
-    : [];
-  await ref.set(
-    { saved_places: existing.filter((p) => p.id !== placeId) },
-    { merge: true }
-  );
+  // Use a transaction so the read-then-write is atomic and concurrent
+  // modifications (e.g., simultaneous add + delete) can't interleave.
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    const existing: SavedPlace[] = Array.isArray(snap.data()?.saved_places)
+      ? (snap.data()!.saved_places as SavedPlace[])
+      : [];
+    tx.set(
+      ref,
+      { saved_places: existing.filter((p) => p.id !== placeId) },
+      { merge: true }
+    );
+  });
 }

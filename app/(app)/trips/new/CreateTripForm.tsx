@@ -237,7 +237,7 @@ const COPY = {
     backToRides: 'חזרה לנסיעות',
     allRequired: 'אנא מלאו את כל שדות החובה.',
     failedCreate: 'יצירת הנסיעה נכשלה. נסו שוב.',
-    weekdays: { 0: 'ראש', 1: 'שני', 2: 'שלי', 3: 'רביע', 4: 'חמי', 5: 'שיש', 6: 'שבת' } as Record<WeekdayIndex, string>,
+    weekdays: { 0: 'ראשון', 1: 'שני', 2: 'שלישי', 3: 'רביעי', 4: 'חמישי', 5: 'שישי', 6: 'שבת' } as Record<WeekdayIndex, string>,
   },
 } as const;
 
@@ -451,6 +451,11 @@ function localizeCreateTripError(message: string, lang: keyof typeof COPY) {
       'Passenger gender preference is invalid': 'העדפת הנוסעים אינה תקינה.',
       'One or more trip rules are invalid': 'כלל נסיעה אחד או יותר אינו תקין.',
       'You must belong to this community to create a trip': 'עליכם להשתייך לקהילה הזו כדי ליצור נסיעה.',
+      'Departure time is required for one-time trips': 'יש להזין שעת יציאה לנסיעה חד-פעמית.',
+      'Departure time is invalid': 'שעת היציאה אינה תקינה. בחרו שעה תקינה.',
+      'Trips must offer at least 1 seat': 'נסיעה חייבת להציע לפחות מושב אחד.',
+      'Price must be a positive whole number of cents': 'המחיר אינו תקין. הזינו מספר שלם או השאירו ריק.',
+      'Recurring departure time must be in HH:MM format': 'פורמט שעת היציאה אינו תקין. השתמשו בפורמט HH:MM.',
     },
   } as const;
 
@@ -493,6 +498,23 @@ function localizeCreateTripError(message: string, lang: keyof typeof COPY) {
       return 'لا يمكن حساب موعد الرحلة القادمة. تأكد من أن الأيام المختارة تتضمن وقتًا مستقبليًا.';
     }
     return COPY.ar.failedCreate;
+  }
+
+  // Hebrew: handle dynamic server error messages
+  if (lang === 'he') {
+    if (normalized.includes('driver-ready profile') || normalized.includes('Missing or incomplete')) {
+      return 'השלימו את הפרטים האישיים לפני השימוש בתכונה זו.';
+    }
+    if (normalized.includes('Public community drivers can only have one active trip')) {
+      return 'לא ניתן לפרסם יותר מנסיעה פעילה אחת בקהילה ציבורית. סגרו את הנסיעה הנוכחית תחילה.';
+    }
+    if (normalized.includes('Recurring trips must select between')) {
+      return 'מספר ימי הנסיעה החוזרת אינו תקין. בחרו את הימים הנכונים.';
+    }
+    if (normalized.includes('Could not compute a valid next occurrence')) {
+      return 'לא ניתן לחשב את מועד הנסיעה הבא. ודאו שהימים הנבחרים כוללים מועד עתידי.';
+    }
+    return COPY.he.failedCreate;
   }
 
   return message;
@@ -601,7 +623,7 @@ export default function CreateTripForm({
   const pricePreview = isFree
     ? t('free')
     : priceInput
-      ? `$${Number(priceInput || '0').toFixed(2)} ${copy.perSeat}`
+      ? `₪${Number(priceInput || '0').toFixed(2)} ${copy.perSeat}`
       : copy.noPriceYet;
 
   // Recurring summary for preview
@@ -749,8 +771,8 @@ export default function CreateTripForm({
   if (success) {
     return (
       <div className="text-center py-8 space-y-3">
-        <div className="w-14 h-14 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-xl font-bold mx-auto">
-          OK
+        <div className="w-14 h-14 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center mx-auto text-emerald-600 dark:text-emerald-400">
+          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>
         </div>
         <p className="text-base font-bold text-slate-900 dark:text-slate-100">{copy.ridePublished}</p>
         <p className="text-sm text-slate-500 dark:text-slate-400">{copy.openingTrip}</p>
@@ -814,7 +836,7 @@ export default function CreateTripForm({
                 className="shrink-0 flex items-center gap-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 rounded-2xl text-sm font-medium text-slate-700 dark:text-slate-200 hover:border-sky-400 hover:text-sky-600 dark:hover:border-sky-500 dark:hover:text-sky-300 transition-colors shadow-sm"
               >
                 <span dir="auto">{route.origin}</span>
-                <span className="text-slate-400 opacity-60 px-0.5">→</span>
+                <span className="inline-block text-slate-400 opacity-60 px-0.5 rtl:rotate-180">→</span>
                 <span dir="auto">{route.destination}</span>
               </button>
             ))}
@@ -827,7 +849,7 @@ export default function CreateTripForm({
         <div className="px-4 pt-4 pb-3">
           <div className="mb-3">
             <p className="block text-[10px] font-bold text-sky-600 dark:text-sky-400 uppercase tracking-widest mb-1">
-              {pickupCopy.trustedPickupPoint} <span className="text-red-400 ml-0.5">*</span>
+              {pickupCopy.trustedPickupPoint} <span className="text-red-400 ms-0.5">*</span>
             </p>
             <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400">
               {pickupCopy.pickupPointHelper}
@@ -934,7 +956,7 @@ export default function CreateTripForm({
           {originError && <p className="text-[10px] text-red-500 mt-2">{originError}</p>}
         </div>
         <div className="flex items-center px-4">
-          <div className="flex flex-col items-center mr-3">
+          <div className="flex flex-col items-center me-3">
             <div className="w-2 h-2 rounded-full bg-sky-500" />
             <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 my-0.5" />
             <div className="w-2 h-2 rounded-full border-2 border-emerald-500" />
@@ -943,7 +965,7 @@ export default function CreateTripForm({
         </div>
         <div className="px-4 pt-3 pb-2">
           <label htmlFor="destination" className="block text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mb-1">
-            {copy.destination} <span className="text-red-400 ml-0.5">*</span>
+            {copy.destination} <span className="text-red-400 ms-0.5">*</span>
           </label>
           <input
             id="destination"

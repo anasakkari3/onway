@@ -184,7 +184,7 @@ export async function createTrip(input: CreateTripInput) {
     throw new NotFoundError('Community not found');
   }
 
-  if (!input.destinationName.trim()) {
+  if (!input.originName.trim() || !input.destinationName.trim()) {
     throw new AppError('Origin and destination are required', 'BAD_REQUEST');
   }
   const originMeetingPoint = await resolveMeetingPointForTripInput({
@@ -753,28 +753,30 @@ export async function getMyBookings(): Promise<TripWithDriver[]> {
     }
   });
   const tripIds = [...bookingByTripId.keys()];
-  const results: TripWithDriver[] = [];
 
-  for (const tripId of tripIds) {
-    const tripDoc = await db.collection('trips').doc(tripId).get();
-    if (!tripDoc.exists) continue;
-    const data = tripDoc.data()!;
-    const trip = withEffectiveStatus({ id: tripDoc.id, ...data, driver: null } as TripWithDriver);
-    if (!isAllowedCommunityId(trip.community_id)) continue;
-    if (!['scheduled', 'full', 'in_progress'].includes(trip.status)) continue;
+  const tripEntries = await Promise.all(
+    tripIds.map(async (tripId) => {
+      const tripDoc = await db.collection('trips').doc(tripId).get();
+      if (!tripDoc.exists) return null;
+      const data = tripDoc.data()!;
+      const trip = withEffectiveStatus({ id: tripDoc.id, ...data, driver: null } as TripWithDriver);
+      if (!isAllowedCommunityId(trip.community_id)) return null;
+      if (!['scheduled', 'full', 'in_progress'].includes(trip.status)) return null;
 
-    const [driver, driverTrustProfile] = await Promise.all([
-      getUserProfile(data.driver_id, db),
-      getUserTrustProfile(data.driver_id, db),
-    ]);
-    results.push({
-      ...trip,
-      driver,
-      driver_completed_drives: driverTrustProfile.driver_trips_count,
-      driver_trust_profile: driverTrustProfile,
-      current_user_booking: bookingByTripId.get(tripId) ?? null,
-    });
-  }
+      const [driver, driverTrustProfile] = await Promise.all([
+        getUserProfile(data.driver_id, db),
+        getUserTrustProfile(data.driver_id, db),
+      ]);
+      return {
+        ...trip,
+        driver,
+        driver_completed_drives: driverTrustProfile.driver_trips_count,
+        driver_trust_profile: driverTrustProfile,
+        current_user_booking: bookingByTripId.get(tripId) ?? null,
+      } as TripWithDriver;
+    })
+  );
+  const results = tripEntries.filter((t): t is TripWithDriver => t !== null);
 
   const hydratedResults = await hydrateTripsWithCommunityInfo(results, db);
   return hydratedResults.sort((a, b) => new Date(a.departure_time).getTime() - new Date(b.departure_time).getTime());
@@ -801,27 +803,49 @@ export async function getMyPastTrips(): Promise<TripWithDriver[]> {
     .get();
 
   const tripIds = new Set<string>();
-  const results: TripWithDriver[] = [];
 
-  for (const d of driverSnap.docs) {
-    const data = d.data();
-    if (!isAllowedCommunityId(data.community_id as string)) continue;
-    tripIds.add(d.id);
-    const driver = await getUserProfile(data.driver_id, db);
-    results.push(withEffectiveStatus({ id: d.id, ...data, driver } as TripWithDriver));
+  // Build allowed driver-trip entries
+  const driverEntries = await Promise.all(
+    driverSnap.docs.map(async (d) => {
+      const data = d.data();
+      if (!isAllowedCommunityId(data.community_id as string)) return null;
+      const driver = await getUserProfile(data.driver_id, db);
+      return { id: d.id, data, driver };
+    })
+  );
+
+  const results: TripWithDriver[] = [];
+  for (const entry of driverEntries) {
+    if (!entry) continue;
+    tripIds.add(entry.id);
+    results.push(withEffectiveStatus({ id: entry.id, ...entry.data, driver: entry.driver } as TripWithDriver));
   }
 
-  for (const b of bookingsSnap.docs) {
-    const tid = b.data().trip_id as string;
-    if (tripIds.has(tid)) continue;
-    const tripDoc = await db.collection('trips').doc(tid).get();
-    if (!tripDoc.exists) continue;
-    const data = tripDoc.data()!;
-    if (!isAllowedCommunityId(data.community_id as string)) continue;
-    if (data.status !== 'completed' && data.status !== 'cancelled') continue;
-    tripIds.add(tid);
-    const driver = await getUserProfile(data.driver_id, db);
-    results.push(withEffectiveStatus({ id: tripDoc.id, ...data, driver } as TripWithDriver));
+  // Collect passenger trip IDs not already in driverTrips
+  const passengerTripIds = [
+    ...new Set(
+      bookingsSnap.docs
+        .map((b) => b.data().trip_id as string)
+        .filter((tid) => !tripIds.has(tid))
+    ),
+  ];
+
+  const passengerEntries = await Promise.all(
+    passengerTripIds.map(async (tid) => {
+      const tripDoc = await db.collection('trips').doc(tid).get();
+      if (!tripDoc.exists) return null;
+      const data = tripDoc.data()!;
+      if (!isAllowedCommunityId(data.community_id as string)) return null;
+      if (data.status !== 'completed' && data.status !== 'cancelled') return null;
+      const driver = await getUserProfile(data.driver_id, db);
+      return { id: tripDoc.id, data, driver };
+    })
+  );
+
+  for (const entry of passengerEntries) {
+    if (!entry) continue;
+    tripIds.add(entry.id);
+    results.push(withEffectiveStatus({ id: entry.id, ...entry.data, driver: entry.driver } as TripWithDriver));
   }
 
   const hydratedResults = await hydrateTripsWithCommunityInfo(results, db);

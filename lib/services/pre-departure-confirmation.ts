@@ -309,8 +309,8 @@ export async function sendPreDepartureConfirmationPrompts(params?: {
         await createNotification({
           userId,
           type: 'system',
-          title: 'Confirm your ride',
-          body: `${getTripRouteLabel(trip)} leaves in about ${window.minutesUntilDeparture} minutes. Tap once to confirm readiness.`,
+          title: '🚗 Ready to go?',
+          body: `${getTripRouteLabel(trip)} departs in about ${window.minutesUntilDeparture} minutes. Open the trip to confirm readiness.`,
           linkUrl: `/trips/${trip.id}`,
           email: true,
           dedupeKey: `pre_departure_prompt:${trip.id}:${userId}`,

@@ -410,11 +410,25 @@ const TRUST_COPY = {
 } as const;
 
 const SAFETY_FLOW_COPY = {
-  beforeBooking:
-    'Safety check: keep pickup details in this trip thread, confirm the car and meeting point before you go, and use report or block if something feels off.',
-  afterCancellation:
-    'If the cancellation created a safety concern or a pattern of misuse, you can still report it from this trip.',
-};
+  en: {
+    beforeBooking:
+      'Safety check: keep pickup details in this trip thread, confirm the car and meeting point before you go, and use report or block if something feels off.',
+    afterCancellation:
+      'If the cancellation created a safety concern or a pattern of misuse, you can still report it from this trip.',
+  },
+  ar: {
+    beforeBooking:
+      'تحقق الأمان: احتفظ بتفاصيل الالتقاء داخل محادثة الرحلة، وتأكد من السيارة ونقطة اللقاء قبل المغادرة، واستخدم البلاغ أو الحظر إذا شعرت بأي تصرف غير مريح.',
+    afterCancellation:
+      'إذا أثار الإلغاء قلقًا أو كشف عن نمط إساءة، يمكنك الإبلاغ عنه من صفحة الرحلة.',
+  },
+  he: {
+    beforeBooking:
+      'בדיקת בטיחות: שמרו את פרטי האיסוף בשרשור הנסיעה, אשרו את הרכב ונקודת המפגש לפני שיוצאים, ודווחו או חסמו אם משהו לא מרגיש בסדר.',
+    afterCancellation:
+      'אם הביטול עורר חשש בטיחותי או דפוס של שימוש לרעה, אפשר לדווח עליו מתוך הנסיעה הזאת.',
+  },
+} as const;
 
 function formatDeparture(isoString: string, lang: Lang, t: (key: string) => string) {
   const departure = new Date(isoString);
@@ -567,6 +581,7 @@ export default function TripDetailClient({
 }: Props) {
   const { t, lang } = useTranslation();
   const copy = DETAIL_COPY[lang] ?? DETAIL_COPY.en;
+  const safetyCopy = SAFETY_FLOW_COPY[lang] ?? SAFETY_FLOW_COPY.en;
   const surfaceCopy = SURFACE_COPY[lang] ?? SURFACE_COPY.en;
   const pickupCopy = PICKUP_COPY[lang] ?? PICKUP_COPY.en;
   const preDepartureCopy = PRE_DEPARTURE_COPY[lang] ?? PRE_DEPARTURE_COPY.en;
@@ -1166,7 +1181,7 @@ export default function TripDetailClient({
             </p>
           </div>
           {trip.price_cents != null && (
-            <div className="text-right">
+            <div className="text-end">
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">
                 {copy.pricePerSeat}
               </p>
@@ -1233,9 +1248,7 @@ export default function TripDetailClient({
               <p className="mt-3 text-sm leading-relaxed text-slate-700 dark:text-slate-300">
                 {preDepartureWindow.isExpired
                   ? preDepartureCopy.expiredDesc
-                  : preDepartureWindow.isBeforeWindow
-                    ? preDepartureCopy.opensIn(preDepartureWindow.minutesUntilOpen)
-                    : preDepartureCopy.activeDesc}
+                  : preDepartureCopy.activeDesc}
               </p>
 
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -1705,7 +1718,7 @@ export default function TripDetailClient({
                   {trustCopy.bookingChecklistDesc}
                 </p>
                 <p className="mt-2 text-xs font-medium text-amber-700 dark:text-amber-300">
-                  {SAFETY_FLOW_COPY.beforeBooking}
+                  {safetyCopy.beforeBooking}
                 </p>
               </div>
 
@@ -1839,7 +1852,7 @@ export default function TripDetailClient({
           </p>
           {!isDriver && (
             <p className="text-xs font-medium text-red-700 dark:text-red-300">
-              {SAFETY_FLOW_COPY.afterCancellation}
+              {safetyCopy.afterCancellation}
             </p>
           )}
         </div>
@@ -1856,7 +1869,7 @@ export default function TripDetailClient({
             )}
           </p>
           <p className="text-xs font-medium text-slate-600 dark:text-slate-300">
-            {SAFETY_FLOW_COPY.afterCancellation}
+            {safetyCopy.afterCancellation}
           </p>
         </div>
       )}
@@ -1866,7 +1879,7 @@ export default function TripDetailClient({
           href={`/trips/${trip.id}/rate`}
           className="block w-full rounded-2xl bg-amber-500 dark:bg-amber-600 px-4 py-4 text-center text-base font-bold text-white hover:bg-amber-600 dark:hover:bg-amber-700 transition-colors btn-press shadow-md"
         >
-          {t('rate_trip')} {'>'}
+          {t('rate_trip')} <span className="rtl:rotate-180 inline-block">→</span>
         </Link>
       )}
 
@@ -1936,7 +1949,7 @@ export default function TripDetailClient({
         <div className="rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5 shadow-sm">
           <div className="mb-4">
             <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-              {t('passengers')} | {confirmedBookings.length}
+              {t('passengers')} · {confirmedBookings.length}
             </h2>
             <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
               {surfaceCopy.passengerListHint}
@@ -1999,7 +2012,7 @@ export default function TripDetailClient({
                           {passengerName}
                         </span>
                         {isPassengerCancelled && (
-                          <span className="ml-2 text-[10px] font-bold text-red-600 bg-red-100 dark:bg-red-900/20 px-1.5 py-0.5 rounded">
+                          <span className="ms-2 text-[10px] font-bold text-red-600 bg-red-100 dark:bg-red-900/20 px-1.5 py-0.5 rounded">
                             {t('cancelled')}
                           </span>
                         )}

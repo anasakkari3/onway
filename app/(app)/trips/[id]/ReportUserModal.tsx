@@ -250,6 +250,7 @@ export default function ReportUserModal({
                 <textarea
                   id="report-context"
                   rows={3}
+                  maxLength={1000}
                   value={context}
                   onChange={(e) => setContext(e.target.value)}
                   data-testid="report-context-input"

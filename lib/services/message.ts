@@ -14,7 +14,7 @@ import {
   canViewTripCommunication,
   isCommunityMember,
 } from '@/lib/auth/permissions';
-import { UnauthorizedError } from '@/lib/utils/errors';
+import { AppError, UnauthorizedError } from '@/lib/utils/errors';
 import { hasTripParticipantBlockConflict } from './safety';
 import { getAvailableCoordinationActions } from '@/lib/trips/coordination';
 import { logWarn } from '@/lib/observability/logger';
@@ -280,10 +280,12 @@ export async function getTripMessages(tripId: string): Promise<MessageWithSender
   const senderIds = [...new Set(snap.docs.map((doc) => doc.data().sender_id as string))];
   const userMap = new Map<string, UserProfile>();
 
-  for (const senderId of senderIds) {
-    const profile = await getUserProfile(db, senderId);
-    if (profile) userMap.set(senderId, profile);
-  }
+  await Promise.all(
+    senderIds.map(async (senderId) => {
+      const profile = await getUserProfile(db, senderId);
+      if (profile) userMap.set(senderId, profile);
+    })
+  );
 
   return snap.docs
     .map((doc) => toMessageWithSender(doc.id, doc.data(), userMap))
@@ -318,10 +320,19 @@ export async function sendTripMessage(tripId: string, content: string): Promise<
     throw new UnauthorizedError('Trip messaging is read-only for this trip');
   }
 
+  const MAX_MESSAGE_LENGTH = 2000;
+  const trimmedContent = content.trim();
+
+  if (!trimmedContent) {
+    throw new AppError('Message content cannot be empty', 'BAD_REQUEST');
+  }
+  if (trimmedContent.length > MAX_MESSAGE_LENGTH) {
+    throw new AppError(`Message must be at most ${MAX_MESSAGE_LENGTH} characters`, 'BAD_REQUEST');
+  }
+
   const db = getAdminFirestore();
   const userProfileDoc = await db.collection('users').doc(user.id).get();
   const userProfile = userProfileDoc.data();
-  const trimmedContent = content.trim();
   const senderDisplayName = userProfile?.display_name ?? 'Someone';
   const senderAvatarUrl = userProfile?.avatar_url ?? null;
   const ref = await db.collection('messages').add({
@@ -361,7 +372,7 @@ export async function sendTripMessage(tripId: string, content: string): Promise<
             userId: id,
             type: 'message',
             title: 'New trip message',
-            body: `${senderDisplayName}: ${trimmedContent}`,
+            body: `${senderDisplayName}: ${trimmedContent.length > 100 ? trimmedContent.slice(0, 97) + '…' : trimmedContent}`,
             linkUrl: `/trips/${tripId}/chat`,
             // Throttle: send at most one chat email per trip per user per hour.
             // Multiple messages in a burst won't produce multiple emails.
@@ -400,85 +411,104 @@ export async function getInboxThreads(): Promise<InboxThread[]> {
     tripMap.set(doc.id, { ...(doc.data() as TripsRow), role: 'driver' });
   }
 
-  for (const bookingDoc of passengerSnap.docs) {
-    const tripId = bookingDoc.data().trip_id as string;
-    if (tripMap.has(tripId)) continue;
+  const passengerTripIds = [
+    ...new Set(
+      passengerSnap.docs
+        .map((d) => d.data().trip_id as string)
+        .filter((id) => !tripMap.has(id))
+    ),
+  ];
 
-    const tripDoc = await db.collection('trips').doc(tripId).get();
-    if (!tripDoc.exists) continue;
+  await Promise.all(
+    passengerTripIds.map(async (tripId) => {
+      const tripDoc = await db.collection('trips').doc(tripId).get();
+      if (!tripDoc.exists) return;
+      tripMap.set(tripId, { ...(tripDoc.data() as TripsRow), role: 'passenger' });
+    })
+  );
 
-    tripMap.set(tripId, { ...(tripDoc.data() as TripsRow), role: 'passenger' });
-  }
-
-  const threads: InboxThread[] = [];
-
-  for (const [tripId, tripData] of tripMap.entries()) {
-    const access = await getTripCommunicationAccessForUser(user.id, tripId, db);
-    if (!access.canView) {
-      continue;
-    }
-
-    let msgSnap: FirebaseFirestore.QuerySnapshot<FirebaseFirestore.DocumentData>;
-    try {
-      msgSnap = await db
-        .collection('messages')
-        .where('trip_id', '==', tripId)
-        .orderBy('created_at', 'desc')
-        .limit(1)
-        .get();
-    } catch {
-      msgSnap = await db
-        .collection('messages')
-        .where('trip_id', '==', tripId)
-        .get();
-    }
-
-    let lastMessage: MessageWithSender | null = null;
-
-    if (!msgSnap.empty) {
-      const latestDoc = [...msgSnap.docs].sort((a, b) => {
-        const timeA = new Date((a.data().created_at as string) ?? 0).getTime();
-        const timeB = new Date((b.data().created_at as string) ?? 0).getTime();
-        return timeB - timeA;
-      })[0];
-
-      const senderProfile = await getUserProfile(db, latestDoc.data().sender_id as string);
-      lastMessage = {
-        id: latestDoc.id,
-        ...latestDoc.data(),
-        sender: senderProfile ?? {
-          display_name: latestDoc.data().sender_display_name ?? null,
-          avatar_url: latestDoc.data().sender_avatar_url ?? null,
-        },
-      } as MessageWithSender;
-    }
-
-    if (!lastMessage && !access.isActiveTrip) {
-      continue;
-    }
-
-    let conversationWith = 'Passengers';
-    if (tripData.role === 'passenger') {
-      const driverProfile = await getUserProfile(db, tripData.driver_id);
-      conversationWith = driverProfile?.display_name ?? 'Driver';
-    }
-
-    threads.push({
+  // Step 1: run all access checks in parallel.
+  const accessResults = await Promise.all(
+    [...tripMap.entries()].map(async ([tripId, tripData]) => ({
       tripId,
-      tripTitle: `${tripData.origin_name} to ${tripData.destination_name}`,
-      tripOrigin: tripData.origin_name,
-      tripDestination: tripData.destination_name,
-      tripDate: tripData.departure_time,
-      communityName:
-        typeof tripData.community_name === 'string' ? tripData.community_name : null,
-      communityType: tripData.community_type === 'public' ? 'public' : 'verified',
-      lastMessage,
-      currentUserRole: tripData.role,
-      conversationWith,
-      isRestricted: access.isRestricted,
-      canSendMessages: access.canSendMessages,
-    });
-  }
+      tripData,
+      access: await getTripCommunicationAccessForUser(user.id, tripId, db),
+    }))
+  );
+
+  const visibleTrips = accessResults.filter((r) => r.access.canView);
+
+  // Step 2: fetch last message and conversation-partner profile for each visible thread in parallel.
+  const threadResults = await Promise.all(
+    visibleTrips.map(async ({ tripId, tripData, access }) => {
+      let msgSnap: FirebaseFirestore.QuerySnapshot<FirebaseFirestore.DocumentData>;
+      try {
+        msgSnap = await db
+          .collection('messages')
+          .where('trip_id', '==', tripId)
+          .orderBy('created_at', 'desc')
+          .limit(1)
+          .get();
+      } catch {
+        msgSnap = await db
+          .collection('messages')
+          .where('trip_id', '==', tripId)
+          .get();
+      }
+
+      let lastMessage: MessageWithSender | null = null;
+
+      if (!msgSnap.empty) {
+        const latestDoc = [...msgSnap.docs].sort((a, b) => {
+          const timeA = new Date((a.data().created_at as string) ?? 0).getTime();
+          const timeB = new Date((b.data().created_at as string) ?? 0).getTime();
+          return timeB - timeA;
+        })[0];
+
+        const senderProfile = await getUserProfile(db, latestDoc.data().sender_id as string);
+        lastMessage = {
+          id: latestDoc.id,
+          ...latestDoc.data(),
+          sender: senderProfile ?? {
+            display_name: latestDoc.data().sender_display_name ?? null,
+            avatar_url: latestDoc.data().sender_avatar_url ?? null,
+          },
+        } as MessageWithSender;
+      }
+
+      if (!lastMessage && !access.isActiveTrip) {
+        return null;
+      }
+
+      let conversationWith = 'Passengers';
+      if (tripData.role === 'passenger') {
+        const driverProfile = await getUserProfile(db, tripData.driver_id);
+        conversationWith = driverProfile?.display_name ?? 'Driver';
+      }
+
+      return {
+        tripId,
+        tripTitle: `${tripData.origin_name} to ${tripData.destination_name}`,
+        tripOrigin: tripData.origin_name,
+        tripDestination: tripData.destination_name,
+        tripDate: tripData.departure_time,
+        communityName:
+          typeof tripData.community_name === 'string' ? tripData.community_name : null,
+        communityType: tripData.community_type === 'public'
+          ? 'public'
+          : tripData.community_type === 'verified'
+            ? 'verified'
+            : null,
+        lastMessage,
+        currentUserRole: tripData.role,
+        conversationWith,
+        isRestricted: access.isRestricted,
+        canSendMessages: access.canSendMessages,
+      } as InboxThread;
+    })
+  );
+
+  const threads = threadResults.filter((t): t is InboxThread => t !== null);
 
   return threads.sort((a, b) => {
     const timeA = new Date(a.lastMessage?.created_at ?? a.tripDate).getTime();
