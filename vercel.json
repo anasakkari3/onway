@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/cron/pre-departure-confirmations",
-      "schedule": "*/5 * * * *"
+      "schedule": "0 7 * * *"
     }
   ]
 }
