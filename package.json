@@ -15,7 +15,6 @@
     "smoke:e2e:install": "playwright install chromium"
   },
   "dependencies": {
-    "@dataconnect/generated": "file:src/dataconnect-generated",
     "@ducanh2912/next-pwa": "^10.2.9",
     "@remotion/player": "^4.0.448",
     "firebase": "^12.10.0",

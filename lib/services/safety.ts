@@ -60,14 +60,11 @@ export async function hasTripParticipantBlockConflict(
       activeParticipantIds.add(booking.passenger_id);
     });
 
-  for (const participantId of activeParticipantIds) {
-    if (participantId === userId) continue;
-    if (await hasDirectBlockRelationship(userId, participantId, db)) {
-      return true;
-    }
-  }
-
-  return false;
+  const otherParticipants = [...activeParticipantIds].filter((id) => id !== userId);
+  const blockResults = await Promise.all(
+    otherParticipants.map((id) => hasDirectBlockRelationship(userId, id, db))
+  );
+  return blockResults.some(Boolean);
 }
 
 export async function validateTripReportParticipants(input: {

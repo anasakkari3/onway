@@ -27,6 +27,21 @@ type LandingCopy = {
   previewEyebrow: string;
   previewTitle: string;
   previewBody: string;
+  subscriptionEyebrow: string;
+  subscriptionTitle: string;
+  subscriptionBody: string;
+  subscriptionStats: { value: string; label: string; detail: string }[];
+  subscriptionPlanTitle: string;
+  subscriptionPlanPrice: string;
+  subscriptionPlanBody: string;
+  subscriptionPlanFeatures: string[];
+  subscriptionAssumption: string;
+  businessEyebrow: string;
+  businessTitle: string;
+  businessBody: string;
+  businessPlans: { title: string; body: string }[];
+  businessNoticeTitle: string;
+  businessNoticeBody: string;
   finalTitle: string;
   finalBody: string;
 };
@@ -74,6 +89,55 @@ const COPY: Record<Lang, LandingCopy> = {
     previewEyebrow: 'Product rhythm',
     previewTitle: 'A mobile-first ride experience with the hard parts already organized',
     previewBody: 'The Remotion preview keeps the story moving while the live app handles matching, saved places, trip status, and coordination.',
+    subscriptionEyebrow: 'Passenger subscription',
+    subscriptionTitle: 'A simple monthly plan for passengers only',
+    subscriptionBody: 'The normal subscription is designed for people booking seats, not riders who offer seats. A fair 20-40 NIS monthly range can replace small per-ride platform fees and keep the rider side attractive.',
+    subscriptionStats: [
+      {
+        value: '17-58%',
+        label: 'Passenger platform-fee saving',
+        detail: 'Compared with paying 6 NIS on each of 8 monthly rides.',
+      },
+      {
+        value: '2-9%',
+        label: 'Passenger total monthly saving',
+        detail: 'Including seats at an example average of 35 NIS per ride.',
+      },
+      {
+        value: '+11%',
+        label: 'Rider net income lift',
+        detail: 'If riders keep the full seat price instead of a 10% rider commission.',
+      },
+    ],
+    subscriptionPlanTitle: 'Passenger Basic',
+    subscriptionPlanPrice: '20-40 NIS / month',
+    subscriptionPlanBody: 'Unlimited passenger access during the month, no rider subscription, and a cleaner price experience before booking.',
+    subscriptionPlanFeatures: [
+      'Only passengers pay the monthly subscription',
+      'Riders can keep offering seats without a monthly fee',
+      'Good target price: 30 NIS for the first public plan',
+      'No billing request until the plan is ready',
+    ],
+    subscriptionAssumption: 'Savings model: 8 rides/month, 35 NIS average seat price, 6 NIS passenger platform fee replaced by a 20-40 NIS subscription.',
+    businessEyebrow: 'Business plan',
+    businessTitle: 'A platform subscription for communities is coming',
+    businessBody: 'The business plan is for campuses, workplaces, municipalities, and local communities that want organized shared rides with moderation, analytics, and private community controls.',
+    businessPlans: [
+      {
+        title: 'Community launch',
+        body: 'Private community setup, invite flow, route visibility, member moderation, and launch support.',
+      },
+      {
+        title: 'Operations dashboard',
+        body: 'Route demand insights, active ride trends, community growth signals, and safety review tools.',
+      },
+      {
+        title: 'Partner support',
+        body: 'Help with onboarding, pilot planning, communication materials, and monthly optimization.',
+      },
+    ],
+    businessNoticeTitle: 'Coming soon: 2 months free',
+    businessNoticeBody: 'After registration, platform partners get 2 months free. No billing details are requested right now.',
     finalTitle: 'Ready for the next ride?',
     finalBody: 'Start with your community, pick the route, and keep the coordination in one place.',
   },
@@ -119,6 +183,55 @@ const COPY: Record<Lang, LandingCopy> = {
     previewEyebrow: 'إيقاع المنتج',
     previewTitle: 'تجربة موبايل أولا، والجزء المتعب منظم مسبقاً',
     previewBody: 'معاينة Remotion تعرض القصة بحركة خفيفة، بينما التطبيق الحقيقي يتولى المطابقة، الأماكن المحفوظة، حالة الرحلة، والتنسيق.',
+    subscriptionEyebrow: 'اشتراك الركاب',
+    subscriptionTitle: 'خطة شهرية بسيطة للركاب فقط',
+    subscriptionBody: 'الاشتراك العادي مخصص لمن يحجزون مقاعد، وليس للسائقين الذين يعرضون المقاعد. نطاق 20-40 شيكل شهرياً يمكن أن يستبدل رسوم المنصة الصغيرة لكل رحلة ويحافظ على جاذبية التطبيق للسائقين.',
+    subscriptionStats: [
+      {
+        value: '17-58%',
+        label: 'توفير رسوم المنصة للراكب',
+        detail: 'مقارنة بدفع 6 شيكل على كل واحدة من 8 رحلات شهرية.',
+      },
+      {
+        value: '2-9%',
+        label: 'توفير شهري إجمالي للراكب',
+        detail: 'يشمل المقاعد بمتوسط مثال 35 شيكل لكل رحلة.',
+      },
+      {
+        value: '+11%',
+        label: 'زيادة صافي دخل السائق',
+        detail: 'إذا احتفظ السائق بسعر المقعد كاملاً بدل عمولة 10%.',
+      },
+    ],
+    subscriptionPlanTitle: 'Passenger Basic',
+    subscriptionPlanPrice: '20-40 شيكل / شهر',
+    subscriptionPlanBody: 'وصول غير محدود للركاب خلال الشهر، بدون اشتراك للسائق، وتجربة سعر أوضح قبل الحجز.',
+    subscriptionPlanFeatures: [
+      'الاشتراك الشهري على الركاب فقط',
+      'السائقون يستطيعون عرض المقاعد بدون رسوم شهرية',
+      'السعر المقترح لأول خطة عامة: 30 شيكل',
+      'لن نطلب بيانات دفع حتى تصبح الخطة جاهزة',
+    ],
+    subscriptionAssumption: 'نموذج التوفير: 8 رحلات شهرياً، 35 شيكل متوسط سعر المقعد، واستبدال رسوم راكب 6 شيكل باشتراك 20-40 شيكل.',
+    businessEyebrow: 'خطة الأعمال',
+    businessTitle: 'اشتراك منصة للمجتمعات قريباً',
+    businessBody: 'خطة الأعمال مخصصة للجامعات، أماكن العمل، البلديات، والمجتمعات المحلية التي تريد رحلات مشتركة منظمة مع إشراف، إحصاءات، وتحكم خاص بالمجتمع.',
+    businessPlans: [
+      {
+        title: 'إطلاق المجتمع',
+        body: 'إعداد مجتمع خاص، دعوات، ظهور المسارات، إدارة الأعضاء، ودعم الإطلاق.',
+      },
+      {
+        title: 'لوحة تشغيل',
+        body: 'رؤى عن طلب المسارات، اتجاهات الرحلات النشطة، نمو المجتمع، وأدوات مراجعة السلامة.',
+      },
+      {
+        title: 'دعم الشركاء',
+        body: 'مساعدة في الانضمام، تخطيط التجربة، مواد التواصل، وتحسين شهري.',
+      },
+    ],
+    businessNoticeTitle: 'قريباً: شهران مجاناً',
+    businessNoticeBody: 'بعد التسجيل، يحصل شركاء المنصة على شهرين مجاناً. لا نطلب أي بيانات دفع الآن.',
     finalTitle: 'جاهز للرحلة القادمة؟',
     finalBody: 'ابدأ من مجتمعك، اختر المسار، وخلي التنسيق في مكان واحد.',
   },
@@ -164,6 +277,55 @@ const COPY: Record<Lang, LandingCopy> = {
     previewEyebrow: 'קצב המוצר',
     previewTitle: 'חוויה מוביילית שבה החלקים הקשים כבר מסודרים',
     previewBody: 'תצוגת Remotion מספרת את הסיפור בתנועה עדינה, והאפליקציה מטפלת בהתאמה, מקומות שמורים, סטטוס ותיאום.',
+    subscriptionEyebrow: 'מנוי לנוסעים',
+    subscriptionTitle: 'תוכנית חודשית פשוטה לנוסעים בלבד',
+    subscriptionBody: 'המנוי הרגיל מיועד לאנשים שמזמינים מושבים, לא לנהגים שמציעים מושבים. טווח הוגן של 20-40 ש"ח בחודש יכול להחליף עמלות קטנות לכל נסיעה ולשמור על צד הנהגים אטרקטיבי.',
+    subscriptionStats: [
+      {
+        value: '17-58%',
+        label: 'חיסכון בעמלת פלטפורמה לנוסע',
+        detail: 'בהשוואה לתשלום 6 ש"ח בכל אחת מ-8 נסיעות חודשיות.',
+      },
+      {
+        value: '2-9%',
+        label: 'חיסכון חודשי כולל לנוסע',
+        detail: 'כולל מושבים במחיר דוגמה ממוצע של 35 ש"ח לנסיעה.',
+      },
+      {
+        value: '+11%',
+        label: 'עלייה בנטו לנהג',
+        detail: 'אם הנהג שומר את מחיר המושב המלא במקום עמלת נהג של 10%.',
+      },
+    ],
+    subscriptionPlanTitle: 'Passenger Basic',
+    subscriptionPlanPrice: '20-40 ש"ח / חודש',
+    subscriptionPlanBody: 'גישה בלתי מוגבלת לנוסעים במהלך החודש, ללא מנוי לנהגים, וחוויית מחיר נקייה יותר לפני הזמנה.',
+    subscriptionPlanFeatures: [
+      'רק נוסעים משלמים את המנוי החודשי',
+      'נהגים יכולים להציע מושבים ללא תשלום חודשי',
+      'מחיר יעד טוב לתוכנית הציבורית הראשונה: 30 ש"ח',
+      'לא נבקש פרטי חיוב עד שהתוכנית תהיה מוכנה',
+    ],
+    subscriptionAssumption: 'מודל החיסכון: 8 נסיעות בחודש, מחיר מושב ממוצע 35 ש"ח, ועמלת נוסע של 6 ש"ח שמוחלפת במנוי 20-40 ש"ח.',
+    businessEyebrow: 'תוכנית עסקית',
+    businessTitle: 'מנוי פלטפורמה לקהילות יגיע בקרוב',
+    businessBody: 'התוכנית העסקית מיועדת לקמפוסים, מקומות עבודה, רשויות וקהילות מקומיות שרוצות נסיעות שיתופיות מאורגנות עם ניהול, נתונים ובקרות קהילה פרטיות.',
+    businessPlans: [
+      {
+        title: 'השקת קהילה',
+        body: 'הקמת קהילה פרטית, הזמנות, נראות מסלולים, ניהול חברים ותמיכה בהשקה.',
+      },
+      {
+        title: 'לוח תפעול',
+        body: 'תובנות ביקוש למסלולים, מגמות נסיעות פעילות, אותות צמיחת קהילה וכלי בדיקת בטיחות.',
+      },
+      {
+        title: 'תמיכת שותפים',
+        body: 'עזרה באונבורדינג, תכנון פיילוט, חומרי תקשורת ואופטימיזציה חודשית.',
+      },
+    ],
+    businessNoticeTitle: 'בקרוב: חודשיים חינם',
+    businessNoticeBody: 'לאחר ההרשמה, שותפי הפלטפורמה מקבלים חודשיים בחינם. לא נבקש פרטי חיוב כרגע.',
     finalTitle: 'מוכנים לנסיעה הבאה?',
     finalBody: 'מתחילים מהקהילה, בוחרים מסלול ושומרים את התיאום במקום אחד.',
   },
@@ -271,6 +433,73 @@ export default async function PublicLandingPage() {
                 <article key={promise.title} className="landing-panel">
                   <h3>{promise.title}</h3>
                   <p>{promise.body}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="landing-section px-4">
+          <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.95fr_1.05fr] lg:items-start">
+            <div>
+              <p className="landing-eyebrow">{copy.subscriptionEyebrow}</p>
+              <h2 className="landing-headline display-title">{copy.subscriptionTitle}</h2>
+              <p className="mt-5 max-w-xl text-base leading-relaxed text-[var(--muted-strong)] sm:text-lg">
+                {copy.subscriptionBody}
+              </p>
+              <p className="mt-5 rounded-lg border border-[var(--border-soft)] bg-[var(--surface-raised)] p-4 text-sm font-bold leading-relaxed text-[var(--muted-strong)]">
+                {copy.subscriptionAssumption}
+              </p>
+            </div>
+
+            <div className="grid gap-4">
+              <div className="grid gap-4 sm:grid-cols-3">
+                {copy.subscriptionStats.map((stat) => (
+                  <article key={stat.label} className="landing-stat-card">
+                    <strong>{stat.value}</strong>
+                    <h3>{stat.label}</h3>
+                    <p>{stat.detail}</p>
+                  </article>
+                ))}
+              </div>
+
+              <article className="landing-plan-card">
+                <div>
+                  <p>{copy.subscriptionPlanTitle}</p>
+                  <h3>{copy.subscriptionPlanPrice}</h3>
+                  <span>{copy.subscriptionPlanBody}</span>
+                </div>
+                <ul>
+                  {copy.subscriptionPlanFeatures.map((feature) => (
+                    <li key={feature}>{feature}</li>
+                  ))}
+                </ul>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section className="landing-section landing-section--muted px-4">
+          <div className="mx-auto max-w-7xl">
+            <div className="grid gap-10 lg:grid-cols-[0.82fr_1.18fr] lg:items-end">
+              <div>
+                <p className="landing-eyebrow">{copy.businessEyebrow}</p>
+                <h2 className="landing-headline display-title">{copy.businessTitle}</h2>
+                <p className="mt-5 max-w-2xl text-base leading-relaxed text-[var(--muted-strong)] sm:text-lg">
+                  {copy.businessBody}
+                </p>
+              </div>
+              <div className="landing-business-notice">
+                <span>{copy.businessNoticeTitle}</span>
+                <p>{copy.businessNoticeBody}</p>
+              </div>
+            </div>
+
+            <div className="mt-10 grid gap-4 md:grid-cols-3">
+              {copy.businessPlans.map((plan) => (
+                <article key={plan.title} className="landing-panel">
+                  <h3>{plan.title}</h3>
+                  <p>{plan.body}</p>
                 </article>
               ))}
             </div>
