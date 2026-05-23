@@ -308,20 +308,23 @@ export async function getBookingsForTrip(tripId: string): Promise<BookingWithPas
   const passengerIds = [...new Set(snap.docs.map((d) => d.data().passenger_id as string))];
   const userMap = new Map<string, UserProfile>();
 
-  for (const pid of passengerIds) {
-    const userDoc = await db.collection('users').doc(pid).get();
-    if (userDoc.exists) {
-      const u = userDoc.data()!;
-      userMap.set(pid, {
-        id: userDoc.id,
-        display_name: u.display_name ?? null,
-        avatar_url: u.avatar_url ?? null,
-        gender: u.gender ?? null,
-        rating_avg: u.rating_avg ?? 0,
-        rating_count: u.rating_count ?? 0,
-      });
-    }
-  }
+  // Fetch all passenger profiles in parallel instead of sequentially
+  await Promise.all(
+    passengerIds.map(async (pid) => {
+      const userDoc = await db.collection('users').doc(pid).get();
+      if (userDoc.exists) {
+        const u = userDoc.data()!;
+        userMap.set(pid, {
+          id: userDoc.id,
+          display_name: u.display_name ?? null,
+          avatar_url: u.avatar_url ?? null,
+          gender: u.gender ?? null,
+          rating_avg: u.rating_avg ?? 0,
+          rating_count: u.rating_count ?? 0,
+        });
+      }
+    })
+  );
 
   const bookings = snap.docs.map((d) => {
     const data = d.data();

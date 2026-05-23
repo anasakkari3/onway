@@ -51,7 +51,11 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  turbopack: {},
+  turbopack: {
+    // Silence the "multiple lockfiles" workspace-root warning — this project's
+    // root is the ride-match directory, not the parent Windows user folder.
+    root: __dirname,
+  },
   webpack(config) {
     // The webpack PWA build can receive undefined chunk data on Windows with
     // Next 16. Keep hashing deterministic without letting that crash builds.

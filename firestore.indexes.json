@@ -1,95 +1,6 @@
 {
   "indexes": [
     {
-      "collectionGroup": "analytics_events",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "created_at", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "bookings",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "trip_id", "order": "ASCENDING" },
-        { "fieldPath": "passenger_id", "order": "ASCENDING" },
-        { "fieldPath": "status", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "bookings",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "trip_id", "order": "ASCENDING" },
-        { "fieldPath": "status", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "bookings",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "passenger_id", "order": "ASCENDING" },
-        { "fieldPath": "status", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "community_members",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "user_id", "order": "ASCENDING" },
-        { "fieldPath": "role", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "messages",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "trip_id", "order": "ASCENDING" },
-        { "fieldPath": "created_at", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "messages",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "trip_id", "order": "ASCENDING" },
-        { "fieldPath": "created_at", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "notifications",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "user_id", "order": "ASCENDING" },
-        { "fieldPath": "created_at", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "notifications",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "user_id", "order": "ASCENDING" },
-        { "fieldPath": "is_read", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "ratings",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "trip_id", "order": "ASCENDING" },
-        { "fieldPath": "rater_id", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "ratings",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "trip_id", "order": "ASCENDING" },
-        { "fieldPath": "rater_id", "order": "ASCENDING" },
-        { "fieldPath": "rated_id", "order": "ASCENDING" }
-      ]
-    },
-    {
       "collectionGroup": "trips",
       "queryScope": "COLLECTION",
       "fields": [
@@ -103,7 +14,78 @@
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "driver_id", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "departure_time", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "messages",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "trip_id", "order": "ASCENDING" },
+        { "fieldPath": "created_at", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "bookings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "trip_id", "order": "ASCENDING" },
         { "fieldPath": "status", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "bookings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "passenger_id", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "bookings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "trip_id", "order": "ASCENDING" },
+        { "fieldPath": "passenger_id", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "reports",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "community_id", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "created_at", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "reports",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "trip_id", "order": "ASCENDING" },
+        { "fieldPath": "reporter_id", "order": "ASCENDING" },
+        { "fieldPath": "reported_id", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "community_join_requests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "community_id", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "created_at", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "notifications",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "user_id", "order": "ASCENDING" },
+        { "fieldPath": "read", "order": "ASCENDING" },
+        { "fieldPath": "created_at", "order": "DESCENDING" }
       ]
     },
     {
@@ -115,10 +97,12 @@
       ]
     },
     {
-      "collectionGroup": "user_blocks",
+      "collectionGroup": "trip_memberships",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "blocked_id", "order": "ASCENDING" }
+        { "fieldPath": "user_id", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "updated_at", "order": "DESCENDING" }
       ]
     }
   ],

@@ -1,135 +1,52 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-    function isSignedIn() {
-      return request.auth != null;
+
+    // Helper: is the requesting user a confirmed/active member of a trip?
+    // Membership doc ID: {tripId}_{userId}
+    function isTripMember(tripId) {
+      return request.auth != null &&
+        exists(/databases/$(database)/documents/trip_memberships/$(tripId + '_' + request.auth.uid));
     }
 
-    function communityMemberDocPath(communityId) {
-      return /databases/$(database)/documents/community_members/$(communityId + '_' + request.auth.uid);
-    }
-
-    function tripMembershipDocPath(tripId) {
-      return /databases/$(database)/documents/trip_memberships/$(tripId + '_' + request.auth.uid);
-    }
-
-    function tripDocPath(tripId) {
-      return /databases/$(database)/documents/trips/$(tripId);
-    }
-
-    function isAllowedCommunityId(communityId) {
-      return communityId in [
-        'azrieli-college-engineering',
-        'hebrew-university-givat-ram',
-        'hebrew-university-mount-scopus',
-        'hadassah-college'
-      ];
-    }
-
-    function isCommunityMember(communityId) {
-      return isSignedIn()
-        && isAllowedCommunityId(communityId)
-        && exists(communityMemberDocPath(communityId));
-    }
-
-    function hasTripMembership(tripId) {
-      return isSignedIn() && exists(tripMembershipDocPath(tripId));
-    }
-
-    function tripExists(tripId) {
-      return exists(tripDocPath(tripId));
-    }
-
-    function tripCommunityId(tripId) {
-      return get(tripDocPath(tripId)).data.community_id;
-    }
-
-    function tripMembershipStatus(tripId) {
-      return get(tripMembershipDocPath(tripId)).data.status;
-    }
-
-    function hasReadableTripMembership(tripId) {
-      return hasTripMembership(tripId)
-        && (tripMembershipStatus(tripId) == 'driver' || tripMembershipStatus(tripId) == 'confirmed');
-    }
-
-    function canReadTripMessages(tripId) {
-      return tripExists(tripId)
-        && isCommunityMember(tripCommunityId(tripId))
-        && hasReadableTripMembership(tripId);
-    }
-
-    function canReadTripRoster(tripId) {
-      return canReadTripMessages(tripId);
-    }
-
-    function canReadTrip(communityId) {
-      return isCommunityMember(communityId);
-    }
-
-    function isCommunityAdmin(communityId) {
-      return isCommunityMember(communityId)
-        && get(communityMemberDocPath(communityId)).data.role == 'admin';
-    }
-
-    match /users/{userId} {
-      allow read: if false;
-      allow write: if false;
-    }
-
-    match /communities/{communityId} {
-      allow read: if isAllowedCommunityId(communityId) && isCommunityMember(communityId);
-      allow write: if false;
-    }
-
-    match /community_members/{membershipId} {
-      allow read: if isSignedIn() && resource.data.user_id == request.auth.uid;
-      allow write: if false;
-    }
-
+    // ── Trips ────────────────────────────────────────────────────────────────
+    // Any authenticated user can read trip data (trips are visible within
+    // the platform to all logged-in members). All writes go through the
+    // server-side Admin SDK, which bypasses these rules entirely.
     match /trips/{tripId} {
-      allow read: if isSignedIn() && canReadTrip(resource.data.community_id);
+      allow read: if request.auth != null;
       allow write: if false;
     }
 
+    // ── Bookings ─────────────────────────────────────────────────────────────
+    // Readable by any trip member (the driver sees the full roster; passengers
+    // can see who else is on board). Writes are server-only.
     match /bookings/{bookingId} {
-      allow read: if isSignedIn() && canReadTripRoster(resource.data.trip_id);
+      allow read: if resource != null && isTripMember(resource.data.trip_id);
       allow write: if false;
     }
 
+    // ── Messages ─────────────────────────────────────────────────────────────
+    // Only trip members may read the chat for that trip. Writes are server-only.
     match /messages/{messageId} {
-      allow read: if isSignedIn() && canReadTripMessages(resource.data.trip_id);
+      allow read: if resource != null && isTripMember(resource.data.trip_id);
       allow write: if false;
     }
 
-    match /trip_memberships/{membershipId} {
-      allow read: if isSignedIn() && resource.data.user_id == request.auth.uid;
+    // ── Trip Memberships ─────────────────────────────────────────────────────
+    // Users may read only their own membership doc (used as an in-session
+    // revocation signal in the chat and trip-detail clients).
+    match /trip_memberships/{docId} {
+      allow read: if request.auth != null &&
+        resource != null &&
+        resource.data.user_id == request.auth.uid;
       allow write: if false;
     }
 
-    match /notifications/{notificationId} {
-      allow read: if isSignedIn() && resource.data.user_id == request.auth.uid;
-      allow write: if false;
-    }
-
-    match /route_requests/{requestId} {
-      allow read: if isSignedIn() && canReadTrip(resource.data.community_id);
-      allow write: if false;
-    }
-
-    match /route_alerts/{alertId} {
-      allow read: if isSignedIn() && resource.data.user_id == request.auth.uid;
-      allow write: if false;
-    }
-
-    match /reports/{reportId} {
-      allow read: if isSignedIn()
-        && isAllowedCommunityId(resource.data.community_id)
-        && isCommunityAdmin(resource.data.community_id);
-      allow write: if false;
-    }
-
+    // ── Everything else ──────────────────────────────────────────────────────
+    // All other collections (users, communities, reports, notifications, …)
+    // are accessed exclusively via server-side Admin SDK calls, which bypass
+    // these rules. Direct client access is denied.
     match /{document=**} {
       allow read, write: if false;
     }

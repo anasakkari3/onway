@@ -465,14 +465,17 @@ export async function getTripsByCommunity(communityId: string): Promise<TripWith
   const userMap = new Map<string, UserProfile>();
   const trustMap = new Map<string, Awaited<ReturnType<typeof getUserTrustProfile>>>();
 
-  for (const driverId of driverIds) {
-    const [profile, trustProfile] = await Promise.all([
-      getUserProfile(driverId, db),
-      getUserTrustProfile(driverId, db),
-    ]);
-    if (profile) userMap.set(driverId, profile);
-    trustMap.set(driverId, trustProfile);
-  }
+  // Fetch all driver profiles and trust scores in parallel
+  await Promise.all(
+    driverIds.map(async (driverId) => {
+      const [profile, trustProfile] = await Promise.all([
+        getUserProfile(driverId, db),
+        getUserTrustProfile(driverId, db),
+      ]);
+      if (profile) userMap.set(driverId, profile);
+      trustMap.set(driverId, trustProfile);
+    })
+  );
 
   const trips = snap.docs.map((d) => {
     const data = d.data();
@@ -659,20 +662,21 @@ export async function getUpcomingCommunityTrips(communityId: string, limitCount 
     .sort((a, b) => new Date(a.departure_time).getTime() - new Date(b.departure_time).getTime())
     .slice(0, limitCount);
 
-  // Fetch driver profiles
-  const results: TripWithDriver[] = [];
-  for (const trip of validTrips) {
-    const [driver, driverTrustProfile] = await Promise.all([
-      getUserProfile(trip.driver_id, db),
-      getUserTrustProfile(trip.driver_id, db),
-    ]);
-    results.push({
-      ...trip,
-      driver,
-      driver_completed_drives: driverTrustProfile.driver_trips_count,
-      driver_trust_profile: driverTrustProfile,
-    });
-  }
+  // Fetch all driver profiles in parallel
+  const results = await Promise.all(
+    validTrips.map(async (trip) => {
+      const [driver, driverTrustProfile] = await Promise.all([
+        getUserProfile(trip.driver_id, db),
+        getUserTrustProfile(trip.driver_id, db),
+      ]);
+      return {
+        ...trip,
+        driver,
+        driver_completed_drives: driverTrustProfile.driver_trips_count,
+        driver_trust_profile: driverTrustProfile,
+      };
+    })
+  );
 
   return hydrateTripsWithCommunityInfo(results, db);
 }
