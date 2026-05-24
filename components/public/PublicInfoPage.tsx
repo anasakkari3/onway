@@ -51,7 +51,7 @@ export default async function PublicInfoPage({
 
       <main className="flex-1 pt-16">
         <section className="relative bg-gradient-to-b from-sky-50 to-white dark:from-slate-900 dark:to-slate-950 pt-20 pb-12 px-4 overflow-hidden">
-          <div className="absolute top-0 right-0 w-[420px] h-[420px] bg-sky-300/15 dark:bg-sky-500/10 rounded-full blur-3xl transform translate-x-1/4 -translate-y-1/4 pointer-events-none" />
+          <div className="absolute top-0 end-0 w-[420px] h-[420px] bg-sky-300/15 dark:bg-sky-500/10 rounded-full blur-3xl transform translate-x-1/4 -translate-y-1/4 pointer-events-none" />
           <div className="max-w-4xl mx-auto relative z-10">
             <p className="text-xs font-bold uppercase tracking-[0.24em] text-sky-600 dark:text-sky-400 mb-4">
               {eyebrow}
