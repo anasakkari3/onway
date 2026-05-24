@@ -1,0 +1,64 @@
+# Settings for Backend (on Cloud Run).
+# See https://firebase.google.com/docs/app-hosting/configure#cloud-run
+runConfig:
+  minInstances: 0
+  # maxInstances: 100
+  # concurrency: 80
+  # cpu: 1
+  # memoryMiB: 512
+
+# Environment variables and secrets.
+env:
+  # Firebase web config is public by design and must be available while
+  # Next.js builds the browser bundle on Firebase App Hosting.
+  - variable: NEXT_PUBLIC_FIREBASE_API_KEY
+    value: AIzaSyAbJzNwK_gNXN9wg81jS7ez8yr5SZe6auY
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+    value: matchmaking-35a64.firebaseapp.com
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+    value: matchmaking-35a64
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+    value: matchmaking-35a64.firebasestorage.app
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+    value: "287699100626"
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_FIREBASE_APP_ID
+    value: "1:287699100626:web:d9b585572214ebf8325e0b"
+    availability:
+      - BUILD
+      - RUNTIME
+
+  # Production domain — used for absolute links in email notifications.
+  - variable: NEXT_PUBLIC_APP_URL
+    value: https://btareqaq.com
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: APP_URL
+    value: https://btareqaq.com
+    availability:
+      - RUNTIME
+
+  # Cron secret for /api/cron/pre-departure-confirmations.
+  # Create this secret in Firebase Secret Manager first:
+  #   firebase secrets:create CRON_SECRET
+  # Then uncomment the block below and the Cloud Scheduler job should
+  # send "Authorization: Bearer <secret>" in the request header.
+  # - variable: CRON_SECRET
+  #   secret: CRON_SECRET
+  #   availability:
+  #     - RUNTIME
