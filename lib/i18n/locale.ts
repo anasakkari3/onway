@@ -2,6 +2,8 @@ import type { Lang } from '@/lib/i18n/dictionaries';
 
 type TranslationFn = (key: string) => string;
 
+export const APP_TIME_ZONE = 'Asia/Jerusalem';
+
 export function isRtlLang(lang: Lang): boolean {
   return lang === 'ar' || lang === 'he';
 }
@@ -27,7 +29,10 @@ export function formatLocalizedDate(
   value: Date | string,
   options?: Intl.DateTimeFormatOptions
 ): string {
-  return new Date(value).toLocaleDateString(getLocaleTag(lang), options);
+  return new Date(value).toLocaleDateString(getLocaleTag(lang), {
+    timeZone: APP_TIME_ZONE,
+    ...options,
+  });
 }
 
 export function formatLocalizedTime(
@@ -36,6 +41,7 @@ export function formatLocalizedTime(
   options?: Intl.DateTimeFormatOptions
 ): string {
   return new Date(value).toLocaleTimeString(getLocaleTag(lang), {
+    timeZone: APP_TIME_ZONE,
     hour: '2-digit',
     minute: '2-digit',
     ...options,
@@ -47,7 +53,41 @@ export function formatLocalizedDateTime(
   value: Date | string,
   options?: Intl.DateTimeFormatOptions
 ): string {
-  return new Date(value).toLocaleString(getLocaleTag(lang), options);
+  return new Date(value).toLocaleString(getLocaleTag(lang), {
+    timeZone: APP_TIME_ZONE,
+    ...options,
+  });
+}
+
+function getAppDateParts(value: Date | string): { year: number; month: number; day: number } {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: APP_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date(value));
+
+  const lookup = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return {
+    year: Number(lookup.year),
+    month: Number(lookup.month),
+    day: Number(lookup.day),
+  };
+}
+
+function getAppDayNumber(value: Date | string): number {
+  const { year, month, day } = getAppDateParts(value);
+  return Date.UTC(year, month - 1, day) / 86_400_000;
+}
+
+export function getAppLocalHour(value: Date | string = new Date()): number {
+  const hour = new Intl.DateTimeFormat('en-US', {
+    timeZone: APP_TIME_ZONE,
+    hour: '2-digit',
+    hour12: false,
+  }).format(new Date(value));
+
+  return Number(hour);
 }
 
 export function getRelativeDayLabel(
@@ -56,10 +96,7 @@ export function getRelativeDayLabel(
   t: TranslationFn
 ): string {
   const target = new Date(value);
-  const now = new Date();
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const startOfTarget = new Date(target.getFullYear(), target.getMonth(), target.getDate());
-  const dayDiff = Math.round((startOfTarget.getTime() - startOfToday.getTime()) / 86_400_000);
+  const dayDiff = Math.round(getAppDayNumber(target) - getAppDayNumber(new Date()));
 
   if (dayDiff === 0) {
     return t('today');

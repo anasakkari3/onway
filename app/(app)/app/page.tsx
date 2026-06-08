@@ -22,7 +22,7 @@ import CommunitySwitcher from './CommunitySwitcher';
 import GuideHint from '@/components/GuideHint';
 import { inferUserContext } from '@/lib/utils/context';
 import { getTripStatusPresentationWithTranslation } from '@/lib/trips/presentation';
-import { formatLocalizedDate } from '@/lib/i18n/locale';
+import { formatLocalizedDate, getAppLocalHour } from '@/lib/i18n/locale';
 import { getServerI18n } from '@/lib/i18n/server';
 import { normalizeDriverGenderFilter } from '@/lib/trips/comfort';
 
@@ -52,6 +52,13 @@ function buildNewTripHref(input?: {
   if (input?.destinationName) params.set('destinationName', input.destinationName);
   const query = params.toString();
   return query ? `/trips/new?${query}` : '/trips/new';
+}
+
+function getGreetingKey(): 'good_morning' | 'good_afternoon' | 'good_evening' {
+  const hour = getAppLocalHour();
+  if (hour >= 5 && hour < 12) return 'good_morning';
+  if (hour >= 12 && hour < 18) return 'good_afternoon';
+  return 'good_evening';
 }
 
 const COPY = {
@@ -251,7 +258,7 @@ export default async function HomePage(props: {
   const heroTitle = isSearchActive
     ? t('finding_ride')
     : firstName
-      ? `${t('good_morning')}, ${firstName}.`
+      ? `${t(getGreetingKey())}, ${firstName}.`
       : t('welcome_to_ride_match');
 
   return (
