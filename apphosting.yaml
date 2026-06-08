@@ -53,6 +53,14 @@ env:
     availability:
       - RUNTIME
 
+  # Super-admin allowlist for the platform oversight dashboard (/admin/overview).
+  # Comma-separated emails matched against the verified Firebase session.
+  # Add more owners/ops here; SUPER_ADMIN_UIDS can be used the same way.
+  - variable: SUPER_ADMIN_EMAILS
+    value: anasakkari04@gmail.com
+    availability:
+      - RUNTIME
+
   # Cron secret for /api/cron/pre-departure-confirmations.
   # Create this secret in Firebase Secret Manager first:
   #   firebase secrets:create CRON_SECRET
