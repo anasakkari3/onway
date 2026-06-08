@@ -182,7 +182,7 @@ export async function bookSeat(
       }
     }
 
-    if (new Date(effectiveTrip.departure_time).getTime() < Date.now()) {
+    if (new Date(effectiveTrip.departure_time).getTime() <= Date.now()) {
       throw new AppError('Trip has already departed', 'BAD_REQUEST');
     }
     if (!Number.isInteger(seats) || seats < 1) {

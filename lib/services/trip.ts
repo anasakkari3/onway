@@ -48,6 +48,7 @@ import {
 } from '@/lib/trips/recurrence';
 import { markRouteRequestFulfilled, notifyRouteAlertsForTrip } from './activation';
 import { resolveMeetingPointForTripInput } from './meeting-points';
+import { hasTripDeparted } from '@/lib/trips/coordination';
 
 function withEffectiveStatus<T extends { status: TripStatus; seats_available: number }>(trip: T): T {
   return {
@@ -488,6 +489,8 @@ export async function getTripsByCommunity(communityId: string): Promise<TripWith
       driver_completed_drives: trustMap.get(data.driver_id)?.driver_trips_count ?? 0,
       driver_trust_profile: trustMap.get(data.driver_id) ?? null,
     } as TripWithDriver);
+  }).filter((trip) => {
+    return trip.seats_available > 0 && trip.status === 'scheduled' && !hasTripDeparted(trip);
   });
 
   return hydrateTripsWithCommunityInfo(trips, db);

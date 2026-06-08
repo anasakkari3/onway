@@ -51,7 +51,7 @@ import { DriverTrustPassport } from '@/components/DriverTrustPassport';
 import CommunityBadge from '@/components/CommunityBadge';
 import EmptyStateCard from '@/components/EmptyStateCard';
 import GuideHint from '@/components/GuideHint';
-import { canDisplayDriverCancelAction } from '@/lib/trips/coordination';
+import { canDisplayDriverCancelAction, isPreDepartureTrip } from '@/lib/trips/coordination';
 import TripCoordinationPanel from './TripCoordinationPanel';
 import ReportUserModal from './ReportUserModal';
 import { DETAIL_COPY, localizeTripActionError } from './tripDetailCopy';
@@ -804,9 +804,14 @@ export default function TripDetailClient({
   const passengerPreferenceBlocksCurrentUser =
     passengerPreference !== 'any' &&
     !doesPassengerGenderMatchPreference(currentUserGender, passengerPreference);
+  const isBookableNow = isPreDepartureTrip({
+    status: trip.status,
+    seats_available: trip.seats_available,
+    departure_time: trip.departure_time,
+  });
   const canBook =
     !isDriver &&
-    isScheduled &&
+    isBookableNow &&
     !hasBooked &&
     !isPast &&
     !passengerPreferenceBlocksCurrentUser;
@@ -822,7 +827,7 @@ export default function TripDetailClient({
     !isDriver &&
     !hasBooked &&
     !isPast &&
-    isScheduled &&
+    isBookableNow &&
     passengerPreferenceBlocksCurrentUser;
   const priceLabel = formatPerSeatPrice(trip.price_cents, t, copy.perSeatSuffix);
   const priceValueLabel = formatPriceLabel(trip.price_cents, t);

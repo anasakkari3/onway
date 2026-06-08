@@ -86,7 +86,7 @@ export async function searchTrips(params: SearchTripsParams) {
     if (baseScore === 0) continue;
 
     const msAway = new Date(t.departure_time).getTime() - now;
-    if (msAway < 0) continue;
+    if (msAway <= 0) continue;
 
     const hoursAway = msAway / (1000 * 60 * 60);
     const timePenalty = Math.min(20, hoursAway * 0.5);

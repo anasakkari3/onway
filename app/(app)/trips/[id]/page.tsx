@@ -9,6 +9,7 @@ import TripDetailClient from './TripDetailClient';
 import { getTripCommunicationAccess } from '@/lib/services/message';
 import { getServerI18n } from '@/lib/i18n/server';
 import { getUserProfile } from '@/lib/services/user';
+import { hasTripDeparted } from '@/lib/trips/coordination';
 
 export default async function TripDetailPage({
   params,
@@ -42,6 +43,14 @@ export default async function TripDetailPage({
 
   const userInCommunity = await isCommunityMember(user?.id, trip.community_id);
   if (!userInCommunity) {
+    notFound();
+  }
+
+  const isDriver = user?.id === trip.driver_id;
+  const isConfirmedPassenger = bookings.some(
+    (booking) => booking.passenger_id === user?.id && booking.status === 'confirmed'
+  );
+  if (hasTripDeparted(trip) && !isDriver && !isConfirmedPassenger) {
     notFound();
   }
 
