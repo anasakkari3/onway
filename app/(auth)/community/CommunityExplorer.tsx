@@ -12,11 +12,40 @@ import {
   joinCommunity,
   requestCommunityJoin,
   submitInviteCode,
+  suggestInstitution,
 } from './actions';
 import {
   COMMUNITY_EXPLORER_COPY,
   localizeCommunityExplorerError,
 } from './communityExplorerCopy';
+import InstitutionSelector, {
+  type InstitutionMembershipState,
+} from '@/components/institutions/InstitutionSelector';
+import type { Institution } from '@/lib/institutions/institutions';
+
+const INSTITUTION_PICKER_COPY = {
+  en: {
+    eyebrow: 'Your institution',
+    title: 'Choose your university or college',
+    description:
+      'Pick your institution by region, or search by name. Selecting it joins (or requests to join) that institution’s ride community.',
+    otherThanks: 'Thanks! Your institution was recorded for review.',
+  },
+  ar: {
+    eyebrow: 'مؤسستك',
+    title: 'اختر جامعتك أو كليتك',
+    description:
+      'اختر مؤسستك حسب المنطقة، أو ابحث بالاسم. اختيارك ينضمّك (أو يرسل طلب انضمام) إلى مجتمع الرحلات الخاص بالمؤسسة.',
+    otherThanks: 'شكرًا! تم تسجيل اسم مؤسستك لمراجعتها وإضافتها.',
+  },
+  he: {
+    eyebrow: 'המוסד שלך',
+    title: 'בחרו את האוניברסיטה או המכללה',
+    description:
+      'בחרו את המוסד לפי אזור, או חפשו לפי שם. הבחירה מצרפת (או שולחת בקשה) לקהילת הנסיעות של המוסד.',
+    otherThanks: 'תודה! שם המוסד שלכם נרשם לבדיקה.',
+  },
+} as const;
 
 type JoinedCommunity = CommunityInfo & {
   role: CommunityMembersRow['role'];
@@ -116,6 +145,52 @@ export default function CommunityExplorer({
     () => new Set(joinedCommunities.map((community) => community.id)),
     [joinedCommunities]
   );
+
+  const institutionCopy = INSTITUTION_PICKER_COPY[lang] ?? INSTITUTION_PICKER_COPY.en;
+
+  // Map an institution onto the live membership state of its backing community.
+  const membershipForInstitution = (institution: Institution): InstitutionMembershipState => {
+    if (joinedCommunityIds.has(institution.communityId)) return 'member';
+    const explore = exploreCommunities.find((community) => community.id === institution.communityId);
+    if (!explore) return 'not_joined';
+    if (explore.membershipState === 'member') return 'member';
+    if (explore.membershipState === 'pending') return 'pending';
+    if (explore.membershipState === 'rejected') return 'rejected';
+    return 'not_joined';
+  };
+
+  // Selecting an institution reuses the existing community join/request flow.
+  const handleSelectInstitution = (institution: Institution) => {
+    const communityId = institution.communityId;
+    if (joinedCommunityIds.has(communityId)) {
+      router.push(`/app?community_id=${communityId}`);
+      return;
+    }
+    const explore = exploreCommunities.find((community) => community.id === communityId);
+    if (explore?.membershipState === 'pending') return;
+    if ((explore?.membership_mode ?? 'open') === 'open') {
+      void handleJoin(communityId);
+    } else {
+      void handleRequest(communityId);
+    }
+  };
+
+  const handleSuggestInstitution = async (name: string) => {
+    setError(null);
+    setNotice(null);
+    const result = await suggestInstitution(name);
+    if (!result.ok) {
+      setError(localizeCommunityExplorerError(result.error, lang));
+      return;
+    }
+    setNotice(institutionCopy.otherThanks);
+  };
+
+  // Institution cards share the community busy-key namespace (id === communityId).
+  const institutionBusyId =
+    busyKey && (busyKey.startsWith('join:') || busyKey.startsWith('request:'))
+      ? busyKey.slice(busyKey.indexOf(':') + 1)
+      : null;
 
   const handleJoin = async (communityId: string) => {
     setBusyKey(`join:${communityId}`);
@@ -487,6 +562,27 @@ export default function CommunityExplorer({
               ))}
             </div>
           )}
+        </section>
+
+        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <div className="mb-4">
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-sky-600 dark:text-sky-400">
+              {institutionCopy.eyebrow}
+            </p>
+            <h2 className="mt-1 text-lg font-bold text-slate-900 dark:text-slate-100" dir="auto">
+              {institutionCopy.title}
+            </h2>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400" dir="auto">
+              {institutionCopy.description}
+            </p>
+          </div>
+          <InstitutionSelector
+            lang={lang}
+            busyId={institutionBusyId}
+            membershipFor={membershipForInstitution}
+            onSelect={handleSelectInstitution}
+            onSubmitOther={handleSuggestInstitution}
+          />
         </section>
 
         <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">

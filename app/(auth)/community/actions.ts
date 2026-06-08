@@ -10,6 +10,8 @@ import {
   cancelJoinRequest,
   submitJoinRequest,
 } from '@/lib/services/community-requests';
+import { getCurrentUser } from '@/lib/auth/session';
+import { getAdminFirestore } from '@/lib/firebase/firestore-admin';
 
 type CommunityActionResult =
   | {
@@ -104,6 +106,36 @@ export async function cancelCommunityRequest(communityId: string): Promise<Commu
         membership_mode: community.membership_mode,
       },
     };
+  } catch (error) {
+    return { ok: false, error: toActionError(error) };
+  }
+}
+
+/**
+ * Records a free-text "Other institution" suggestion from a user whose
+ * university/college is not yet in the curated list. This is a real write to
+ * Firestore `institution_suggestions` (reviewed by admins before a community is
+ * added) — not a placeholder. Returns gracefully on any failure.
+ */
+export async function suggestInstitution(
+  name: string
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    const user = await getCurrentUser();
+    if (!user) return { ok: false, error: 'Sign in to suggest an institution.' };
+
+    const trimmed = name.trim();
+    if (!trimmed) return { ok: false, error: 'Institution name is required.' };
+
+    const db = getAdminFirestore();
+    await db.collection('institution_suggestions').add({
+      user_id: user.id,
+      name: trimmed.slice(0, 160),
+      status: 'new',
+      created_at: new Date().toISOString(),
+    });
+
+    return { ok: true };
   } catch (error) {
     return { ok: false, error: toActionError(error) };
   }
