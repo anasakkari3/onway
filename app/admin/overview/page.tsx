@@ -269,6 +269,12 @@ export default async function AdminOverviewPage(props: {
       </header>
 
       <nav className="flex flex-wrap gap-2">
+        <Link
+          href="/admin/monitoring"
+          className="rounded-full bg-slate-950 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-950 dark:hover:bg-white"
+        >
+          System Insights
+        </Link>
         {(['overview', 'users', 'problems'] as Tab[]).map((t) => (
           <Link
             key={t}

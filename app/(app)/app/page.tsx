@@ -12,7 +12,6 @@ import {
 } from '@/lib/services/trip';
 import CommunityBadge from '@/components/CommunityBadge';
 import EmptyStateCard from '@/components/EmptyStateCard';
-import BrandLogo from '@/components/BrandLogo';
 import PwaInstallPrompt from '../PwaInstallPrompt';
 import InlineSearch from '../InlineSearch';
 import SearchResults from './SearchResults';
@@ -25,6 +24,7 @@ import { getTripStatusPresentationWithTranslation } from '@/lib/trips/presentati
 import { formatLocalizedDate, getAppLocalHour } from '@/lib/i18n/locale';
 import { getServerI18n } from '@/lib/i18n/server';
 import { normalizeDriverGenderFilter } from '@/lib/trips/comfort';
+import { trackEvent } from '@/lib/services/analytics';
 
 function buildAppHref(input?: {
   communityId?: string | null;
@@ -160,6 +160,13 @@ export default async function HomePage(props: {
     ? await Promise.all([getUserProfile(user.id), getSavedPlaces(user.id)])
     : [null, []];
   const fullProfile = user ? await getMyProfileFull(user.id) : null;
+  if (user) {
+    await trackEvent('page_view', {
+      userId: user.id,
+      status: 'success',
+      metadata: { page: '/app' },
+    });
+  }
   const firstName = profile?.display_name?.trim().split(/\s+/)[0] || null;
   const cityOrArea = fullProfile?.city_or_area ?? undefined;
 
@@ -267,9 +274,6 @@ export default async function HomePage(props: {
 
       <div className="app-hero relative pt-8 pb-16 px-4 -mt-16 w-full max-w-2xl mx-auto overflow-hidden rounded-b-lg">
         <div className="relative z-10 pt-16 animate-fade-in-up">
-          <div className="journey-hero__brand mb-4">
-            <BrandLogo lang={lang} size="footer" priority />
-          </div>
           <p className="mb-3 inline-flex rounded-lg border border-white/15 bg-white/10 px-2.5 py-1 text-xs font-bold text-white/80 backdrop-blur" dir="auto">
             {heroScopeLabel}
           </p>

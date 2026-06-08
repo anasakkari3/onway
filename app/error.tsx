@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { useTranslation } from '@/lib/i18n/LanguageProvider';
+import { logClientSystemError } from '@/lib/analytics/client-actions';
 
 export default function GlobalError({
   error,
@@ -14,6 +15,20 @@ export default function GlobalError({
 
   useEffect(() => {
     console.error('Global Error Boundary caught:', error);
+    void logClientSystemError({
+      message: error.message || 'Global error boundary caught an error',
+      stack: error.stack,
+      page: typeof window !== 'undefined' ? window.location.pathname : undefined,
+      component: 'GlobalError',
+      severity: 'high',
+      browserInfo:
+        typeof window !== 'undefined'
+          ? {
+              userAgent: window.navigator.userAgent,
+              language: window.navigator.language,
+            }
+          : undefined,
+    });
   }, [error]);
 
   const copy = {

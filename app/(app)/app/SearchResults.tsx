@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { searchTrips } from '@/lib/services/matching';
+import { trackEvent } from '@/lib/services/analytics';
 import EmptyStateCard from '@/components/EmptyStateCard';
 import TrackedLink from '@/components/TrackedLink';
 import { TripCard } from './TripCard';
@@ -89,6 +90,26 @@ export default async function SearchResults({
   const exactMatches = result.exactMatches;
   const recommendations = result.recommendations;
   const totalResults = exactMatches.length + recommendations.length;
+  await trackEvent('trip_search', {
+    communityId,
+    status: 'success',
+    metadata: {
+      originName: originQuery,
+      destinationName: destQuery,
+      driverGenderFilter,
+    },
+  });
+  await trackEvent('trip_results_shown', {
+    communityId,
+    status: totalResults > 0 ? 'success' : 'info',
+    metadata: {
+      originName: originQuery,
+      destinationName: destQuery,
+      exactMatches: exactMatches.length,
+      recommendations: recommendations.length,
+      totalResults,
+    },
+  });
   const encodedOrigin = encodeURIComponent(originQuery);
   const encodedDestination = encodeURIComponent(destQuery);
   const createHref = `/trips/new?community_id=${encodeURIComponent(communityId)}&originName=${encodedOrigin}&destinationName=${encodedDestination}`;

@@ -51,7 +51,20 @@ export default async function TripDetailPage({
   }
 
   try {
-    await trackEvent('trip_opened', { userId: user?.id, payload: { trip_id: id } });
+    await trackEvent('trip_opened', {
+      userId: user?.id,
+      communityId: trip.community_id,
+      tripId: id,
+      status: 'success',
+      payload: { trip_id: id },
+    });
+    await trackEvent('trip_details_view', {
+      userId: user?.id,
+      communityId: trip.community_id,
+      tripId: id,
+      status: 'success',
+      metadata: { driver_id: trip.driver_id },
+    });
   } catch {
     // non-critical
   }

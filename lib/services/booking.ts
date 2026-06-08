@@ -7,7 +7,7 @@ import type {
   TripsRow,
   UserProfile,
 } from '@/lib/types';
-import { trackEvent } from './analytics';
+import { logSystemError, trackEvent } from './analytics';
 import { UnauthorizedError, NotFoundError, AppError } from '@/lib/utils/errors';
 import { createNotification } from './notification';
 import { canJoinTrip, canCancelBooking } from '@/lib/auth/permissions';
@@ -63,6 +63,14 @@ export async function bookSeat(
 
   await trackEvent('booking_attempted', {
     userId: user.id,
+    tripId,
+    status: 'pending',
+    payload: { trip_id: tripId, seats },
+  });
+  await trackEvent('booking_started', {
+    userId: user.id,
+    tripId,
+    status: 'pending',
     payload: { trip_id: tripId, seats },
   });
 
@@ -266,10 +274,38 @@ export async function bookSeat(
         passenger: passengerSnapshot,
       } as BookingWithPassenger,
     };
+  }).catch(async (error) => {
+    await trackEvent('booking_failed', {
+      userId: user.id,
+      tripId,
+      status: 'failed',
+      metadata: {
+        seats,
+        error: error instanceof Error ? error.message : String(error),
+      },
+    });
+    await logSystemError(error, {
+      userId: user.id,
+      severity: 'medium',
+      action: 'bookSeat',
+      tripId,
+      metadata: { seats },
+    });
+    throw error;
   });
 
   await trackEvent('booking_confirmed', {
     userId: user.id,
+    tripId,
+    bookingId: result.booking_id,
+    status: 'success',
+    payload: { trip_id: tripId, booking_id: result.booking_id },
+  });
+  await trackEvent('booking_completed', {
+    userId: user.id,
+    tripId,
+    bookingId: result.booking_id,
+    status: 'success',
     payload: { trip_id: tripId, booking_id: result.booking_id },
   });
 
@@ -478,6 +514,17 @@ export async function cancelBooking(bookingId: string) {
   } catch {
     // non-critical
   }
+
+  await trackEvent('booking_cancelled', {
+    userId: user.id,
+    tripId: result.tripId,
+    bookingId: result.bookingId,
+    status: 'cancelled',
+    metadata: {
+      seats: result.seats,
+      cancelledBy: result.cancelledBy,
+    },
+  });
 
   return result;
 }

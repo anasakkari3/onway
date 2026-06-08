@@ -376,6 +376,8 @@ export async function createTrip(input: CreateTripInput) {
   await trackEvent('trip_created', {
     userId: user.id,
     communityId: input.communityId,
+    tripId: ref.id,
+    status: 'success',
     payload: { trip_id: ref.id },
   });
 
@@ -592,9 +594,9 @@ export async function updateTripStatus(tripId: string, status: TripStatus) {
   });
 
   if (status === 'completed') {
-    await trackEvent('trip_completed', { userId: user.id, payload: { trip_id: tripId } });
+    await trackEvent('trip_completed', { userId: user.id, tripId, status: 'success', payload: { trip_id: tripId } });
   } else if (status === 'in_progress') {
-    await trackEvent('trip_started', { userId: user.id, payload: { trip_id: tripId } });
+    await trackEvent('trip_started', { userId: user.id, tripId, status: 'success', payload: { trip_id: tripId } });
   } else if (status === 'cancelled') {
     await syncTripMembershipsForTrip(
       { id: tripId, driver_id: updatedTrip.driver_id },
