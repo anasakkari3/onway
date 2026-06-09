@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import { cookies } from 'next/headers';
 import { getAdminAuth } from '@/lib/firebase/admin';
 import { logWarn } from '@/lib/observability/logger';
@@ -56,7 +57,16 @@ export async function clearSession() {
   }
 }
 
-export async function getCurrentUser(): Promise<AuthUser | null> {
+/**
+ * Resolve the signed-in user from the session cookie.
+ *
+ * Wrapped in React `cache()` so it is memoised per server request: a single
+ * page render (or server action) typically calls this many times — directly and
+ * indirectly through services — and each raw call costs a network round-trip to
+ * Firebase Auth (`verifySessionCookie` with checkRevoked=true). Caching collapses
+ * those to one verification per request while keeping the revocation check intact.
+ */
+export const getCurrentUser = cache(async (): Promise<AuthUser | null> => {
   const cookieStore = await cookies();
   const sessionCookie = cookieStore.get(AUTH_COOKIE_NAME)?.value;
   if (!sessionCookie) return null;
@@ -77,4 +87,4 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
     });
     return null;
   }
-}
+});
