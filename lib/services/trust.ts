@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import { getAdminFirestore } from '@/lib/firebase/firestore-admin';
 import { getAdminAuth } from '@/lib/firebase/admin';
 import { isAllowedCommunityId } from '@/lib/community/allowed';
@@ -224,11 +225,16 @@ export function getTrustBadges(input: {
   return badges;
 }
 
-export async function getUserTrustProfile(
-  userId: string,
-  passedDb?: FirebaseFirestore.Firestore
-): Promise<TrustProfile> {
-  const db = passedDb ?? getAdminFirestore();
+/**
+ * Compute a user's trust profile (reads ride stats + community count + the user
+ * doc, then writes the cached aggregate back). On the trip feed this used to run
+ * once per trip for the *same* driver — N redundant computations and N
+ * best-effort writes. React `cache()` memoises by userId so it runs once per
+ * request per user. `getAdminFirestore()` is a singleton, so a passed db (always
+ * that instance) is intentionally routed through the cache too.
+ */
+const computeUserTrustProfile = cache(async (userId: string): Promise<TrustProfile> => {
+  const db = getAdminFirestore();
   const [userDoc, stats, communitiesCount] = await Promise.all([
     db.collection('users').doc(userId).get(),
     getCompletedRideStats(userId, db),
@@ -306,4 +312,12 @@ export async function getUserTrustProfile(
   }
 
   return trustProfile;
+});
+
+export async function getUserTrustProfile(
+  userId: string,
+  passedDb?: FirebaseFirestore.Firestore
+): Promise<TrustProfile> {
+  void passedDb; // computation is memoised per request by userId (db is a singleton)
+  return computeUserTrustProfile(userId);
 }

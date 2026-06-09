@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import { getAdminFirestore } from '@/lib/firebase/firestore-admin';
 import { getAdminAuth } from '@/lib/firebase/admin';
 import { trackEvent } from './analytics';
@@ -353,17 +354,34 @@ export async function ensureUserProfile(idToken: string) {
 /**
  * Fetches a public safe UserProfile.
  */
+/**
+ * Per-request cached read of a user document.
+ *
+ * `getUserProfile`, `getMyProfileFull` and the trip feed all read the same
+ * `users/{id}` doc — often for the *same* driver multiple times in one render
+ * (a feed where one driver posted several trips). React `cache()` memoises by
+ * userId so each user document is fetched once per request instead of N times.
+ * `getAdminFirestore()` is a singleton, so an explicitly passed db (always that
+ * same instance) is intentionally routed through the cache too.
+ */
+const loadUserDocData = cache(
+  async (userId: string): Promise<admin.firestore.DocumentData | null> => {
+    const db = getAdminFirestore();
+    const doc = await db.collection('users').doc(userId).get();
+    return doc.exists ? doc.data()! : null;
+  }
+);
+
 export async function getUserProfile(
   userId: string,
   passedDb?: admin.firestore.Firestore
 ): Promise<UserProfile | null> {
-  const db = passedDb || getAdminFirestore();
-  const doc = await db.collection('users').doc(userId).get();
-  if (!doc.exists) return null;
+  void passedDb; // reads go through the per-request cache (db is a singleton)
+  const d = await loadUserDocData(userId);
+  if (!d) return null;
 
-  const d = doc.data()!;
   return {
-    id: doc.id,
+    id: userId,
     display_name: d.display_name ?? null,
     avatar_url: d.avatar_url ?? null,
     gender: d.gender ?? null,
@@ -377,14 +395,11 @@ export async function getUserProfile(
  * Only call this server-side when the authenticated user is viewing their OWN profile.
  */
 export async function getMyProfileFull(userId: string): Promise<MyUserProfileFull | null> {
-  const db = getAdminFirestore();
-  const doc = await db.collection('users').doc(userId).get();
-  if (!doc.exists) return null;
-
-  const d = doc.data()!;
+  const d = await loadUserDocData(userId);
+  if (!d) return null;
 
   return {
-    id: doc.id,
+    id: userId,
     display_name: d.display_name ?? null,
     avatar_url: d.avatar_url ?? null,
     phone: d.phone ?? null,
