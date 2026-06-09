@@ -49,6 +49,7 @@ type ScreenCopy = {
   resetSent: string;
   verificationTitle: string;
   verificationBody: (email: string) => string;
+  verificationSpamHint: string;
   verificationSent: string;
   verifiedContinue: string;
   resendVerification: string;
@@ -98,6 +99,7 @@ const COPY: Record<SupportedLang, ScreenCopy> = {
     verificationTitle: 'Verify your email',
     verificationBody: (email) =>
       `We sent a verification email to ${email}. Open it, then come back here and continue.`,
+    verificationSpamHint: '💡 Didn\'t get it? Check your spam or promotions folder.',
     verificationSent: 'Verification email sent.',
     verifiedContinue: 'I verified my email',
     resendVerification: 'Resend verification email',
@@ -161,6 +163,7 @@ const COPY: Record<SupportedLang, ScreenCopy> = {
     verificationTitle: 'تحقق من بريدك',
     verificationBody: (email) =>
       `أرسلنا رسالة تحقق إلى ${email}. افتحها، ثم ارجع لهذه الصفحة واضغط متابعة.`,
+    verificationSpamHint: '💡 ما استقبلت الرسالة؟ بدّق في مجلد Spam أو الرسائل الترويجية.',
     verificationSent: 'تم إرسال رسالة التحقق.',
     verifiedContinue: 'تحققت من بريدي',
     resendVerification: 'إرسال رسالة تحقق جديدة',
@@ -224,6 +227,7 @@ const COPY: Record<SupportedLang, ScreenCopy> = {
     verificationTitle: 'אימות אימייל',
     verificationBody: (email) =>
       `שלחנו אימייל אימות אל ${email}. פתחו אותו ואז חזרו לכאן כדי להמשיך.`,
+    verificationSpamHint: '💡 לא קיבלתם? בדקו את תיקיית ה-Spam או הקידומות.',
     verificationSent: 'אימייל אימות נשלח.',
     verifiedContinue: 'אימתתי את האימייל',
     resendVerification: 'שליחת אימות מחדש',
@@ -785,6 +789,9 @@ function LoginContent() {
                 </p>
                 <p className="mt-2 text-sm leading-relaxed text-[var(--muted-strong)]">
                   {copy.verificationBody(pendingEmail || email)}
+                </p>
+                <p className="mt-3 text-xs text-[var(--muted)] leading-relaxed">
+                  {copy.verificationSpamHint}
                 </p>
               </div>
               <SubmitButton
