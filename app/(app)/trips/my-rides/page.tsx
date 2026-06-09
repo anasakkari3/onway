@@ -2,7 +2,6 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import CommunityBadge from '@/components/CommunityBadge';
 import EmptyStateCard from '@/components/EmptyStateCard';
-import GuideHint from '@/components/GuideHint';
 import { getCurrentUser } from '@/lib/auth/session';
 import { getServerI18n } from '@/lib/i18n/server';
 import { formatLocalizedDateTime, formatSeatAvailability } from '@/lib/i18n/locale';
@@ -137,8 +136,6 @@ export default async function MyRidesPage() {
           </div>
         </div>
       </section>
-
-      <GuideHint text={copy.guide} variant="info" dismissible />
 
       {myBookings.length === 0 && myTrips.length === 0 ? (
         <EmptyStateCard

@@ -7,7 +7,6 @@ import { getEffectiveTripStatus } from '@/lib/trips/lifecycle';
 import { logWarn } from '@/lib/observability/logger';
 import Link from 'next/link';
 import CommunityBadge from '@/components/CommunityBadge';
-import GuideHint from '@/components/GuideHint';
 import { formatLocalizedDate, formatLocalizedTime } from '@/lib/i18n/locale';
 import { getServerI18n } from '@/lib/i18n/server';
 import { DriverTrustSummary } from '@/app/(app)/DriverTrustSummary';
@@ -116,12 +115,6 @@ export default async function TripChatPage({
       {isFrozen && (
         <div className="shrink-0 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-widest text-center py-2 border-b border-slate-200 dark:border-slate-700">
           {copy.frozen(t(effectiveStatus))}
-        </div>
-      )}
-
-      {!isFrozen && (
-        <div className="shrink-0 px-4 py-3">
-          <GuideHint text={copy.guide} variant="info" dismissible />
         </div>
       )}
 

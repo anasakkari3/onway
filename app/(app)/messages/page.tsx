@@ -2,7 +2,6 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import CommunityBadge from '@/components/CommunityBadge';
 import EmptyStateCard from '@/components/EmptyStateCard';
-import GuideHint from '@/components/GuideHint';
 import { getCurrentUser } from '@/lib/auth/session';
 import { getServerI18n } from '@/lib/i18n/server';
 import { formatLocalizedDate, formatLocalizedTime } from '@/lib/i18n/locale';
@@ -159,8 +158,6 @@ export default async function MessagesPage() {
           )}
         </div>
       </section>
-
-      <GuideHint text={copy.guide} variant="info" dismissible />
 
       <div className="space-y-3">
         {threads.map((thread) => {

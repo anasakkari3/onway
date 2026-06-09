@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import EmptyStateCard from '@/components/EmptyStateCard';
-import GuideHint from '@/components/GuideHint';
 import { getCurrentUser } from '@/lib/auth/session';
 import { getServerI18n } from '@/lib/i18n/server';
 import { getMyNotifications } from '@/lib/services/notification';
@@ -107,8 +106,6 @@ export default async function NotificationsPage() {
           </span>
         </div>
       </section>
-
-      <GuideHint text={copy.guide} variant="info" dismissible />
 
       <NotificationListClient initialNotifications={notifications} />
     </div>

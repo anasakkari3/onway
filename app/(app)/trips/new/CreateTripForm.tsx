@@ -782,8 +782,6 @@ export default function CreateTripForm({
 
   return (
     <form onSubmit={handleSubmit} className="create-trip-form" noValidate>
-      <GuideHint text={copy.formGuide} dismissible />
-
       {/* Community context */}
       <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4">
         <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">{copy.postingIn}</p>

@@ -4,7 +4,6 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { CommunityIdentityCard } from '@/components/CommunityIdentityCard';
 import { useTranslation } from '@/lib/i18n/LanguageProvider';
-import GuideHint from '@/components/GuideHint';
 import { formatLocalizedDateTime } from '@/lib/i18n/locale';
 import type { CommunityInfo, CommunityMembersRow } from '@/lib/types';
 import {
@@ -471,8 +470,6 @@ export default function CommunityExplorer({
             {copy.description}
           </p>
         </div>
-
-        <GuideHint text={trustGuideCopy.howToStart} dismissible />
 
         {notice && (
           <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-900/20 dark:text-emerald-300">

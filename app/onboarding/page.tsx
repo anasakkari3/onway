@@ -4,7 +4,6 @@ import { BRAND_NAME } from '@/lib/brand/config';
 import { getServerLang } from '@/lib/i18n/server';
 import { getRequiredProfileCompletionStatus } from '@/lib/services/user';
 import ProfileForm from '@/app/(app)/profile/ProfileForm';
-import GuideHint from '@/components/GuideHint';
 
 const COPY = {
   en: {
@@ -88,8 +87,6 @@ export default async function OnboardingPage(props: {
             {copy.description}
           </p>
         </div>
-
-        <GuideHint text={copy.guide} variant="info" />
 
         <div className="rounded-3xl border border-amber-200 bg-amber-50 p-5 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-wide text-amber-800">

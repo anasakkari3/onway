@@ -5,7 +5,6 @@ import { getMyProfileFull } from '@/lib/services/user';
 import { getUserTrustProfile } from '@/lib/services/trust';
 import ProfileForm from './ProfileForm';
 import ProfileCompletenessIndicator from './ProfileCompletenessIndicator';
-import GuideHint from '@/components/GuideHint';
 import { DriverTrustPassport } from '@/components/DriverTrustPassport';
 import { formatLocalizedDate } from '@/lib/i18n/locale';
 import { getServerI18n } from '@/lib/i18n/server';
@@ -124,8 +123,6 @@ export default async function ProfilePage() {
           </Link>
         </div>
       </section>
-
-      <GuideHint text={copy.profileGuide} dismissible />
 
       <section className="animate-fade-in-up stagger-1" aria-label={copy.trustTitle}>
         <DriverTrustPassport

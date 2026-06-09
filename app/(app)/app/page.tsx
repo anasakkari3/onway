@@ -19,7 +19,6 @@ import SearchResults from './SearchResults';
 import SearchSkeleton from './SearchSkeleton';
 import DiscoveryFeed from './DiscoveryFeed';
 import CommunitySwitcher from './CommunitySwitcher';
-import GuideHint from '@/components/GuideHint';
 import { inferUserContext } from '@/lib/utils/context';
 import { getTripStatusPresentationWithTranslation } from '@/lib/trips/presentation';
 import { formatLocalizedDate, getAppLocalHour } from '@/lib/i18n/locale';
@@ -320,8 +319,6 @@ export default async function HomePage(props: {
             />
           </section>
         )}
-
-        <GuideHint text={copy.dashboardGuide} dismissible />
 
         <section className="animate-fade-in-up stagger-2 space-y-3">
           {!isSearchActive && (

@@ -50,7 +50,6 @@ import {
 import { DriverTrustPassport } from '@/components/DriverTrustPassport';
 import CommunityBadge from '@/components/CommunityBadge';
 import EmptyStateCard from '@/components/EmptyStateCard';
-import GuideHint from '@/components/GuideHint';
 import { canDisplayDriverCancelAction, isPreDepartureTrip } from '@/lib/trips/coordination';
 import TripCoordinationPanel from './TripCoordinationPanel';
 import ReportUserModal from './ReportUserModal';
@@ -1024,10 +1023,6 @@ export default function TripDetailClient({
 
   return (
     <div className="trip-detail-flow">
-      {!isDriver && !hasBooked && isScheduled && (
-        <GuideHint text={surfaceCopy.actionGuide} dismissible />
-      )}
-
       <div className={`trip-detail-hero rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm overflow-hidden ${statusUi.cardClassName} ${isInProgress ? 'trip-detail-hero--live' : ''}`}>
         <div className={`trip-detail-hero__top px-5 pt-5 pb-4 ${
           isCancelled
