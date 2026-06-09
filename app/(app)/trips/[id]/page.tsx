@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import { after } from 'next/server';
 import Link from 'next/link';
 import { getCurrentUser } from '@/lib/auth/session';
 import { getTripById } from '@/lib/services/trip';
@@ -20,10 +21,15 @@ export default async function TripDetailPage({
 }) {
   const { id } = await params;
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
-  const { t } = await getServerI18n();
 
-  const user = await getCurrentUser();
-  const currentUserProfile = user ? await getUserProfile(user.id) : null;
+  // i18n + auth don't depend on each other — resolve them together.
+  const [{ t }, user] = await Promise.all([getServerI18n(), getCurrentUser()]);
+
+  // Kick off the (independent) profile fetch concurrently with the trip batch.
+  const profilePromise = user
+    ? getUserProfile(user.id).catch(() => null)
+    : Promise.resolve(null);
+
   let trip;
   let bookings;
   let communicationAccess = {
@@ -33,13 +39,18 @@ export default async function TripDetailPage({
     isRestricted: false,
   };
   try {
-    trip = await getTripById(id);
-    bookings = await getBookingsForTrip(id);
-    communicationAccess = await getTripCommunicationAccess(id);
+    // These three only need the trip id — fetch them in parallel, not in a chain.
+    [trip, bookings, communicationAccess] = await Promise.all([
+      getTripById(id),
+      getBookingsForTrip(id),
+      getTripCommunicationAccess(id),
+    ]);
   } catch {
     notFound();
   }
   if (!trip) notFound();
+
+  const currentUserProfile = await profilePromise;
 
   const userInCommunity = await isCommunityMember(user?.id, trip.community_id);
   if (!userInCommunity) {
@@ -59,39 +70,34 @@ export default async function TripDetailPage({
     authorizedBookings = bookings;
   }
 
-  try {
-    await trackEvent('trip_opened', {
+  // Analytics writes must never block the page render — flush them after the
+  // response is sent. trackEvent already swallows its own errors.
+  const trustScore = trip.driver_trust_profile?.trust_score;
+  const driverId = trip.driver_id;
+  const communityId = trip.community_id;
+  const showDriverView = Boolean(trip.driver_trust_profile && user?.id && user.id !== driverId);
+  after(() => {
+    void trackEvent('trip_opened', {
       userId: user?.id,
-      communityId: trip.community_id,
+      communityId,
       tripId: id,
       status: 'success',
       payload: { trip_id: id },
     });
-    await trackEvent('trip_details_view', {
+    void trackEvent('trip_details_view', {
       userId: user?.id,
-      communityId: trip.community_id,
+      communityId,
       tripId: id,
       status: 'success',
-      metadata: { driver_id: trip.driver_id },
+      metadata: { driver_id: driverId },
     });
-  } catch {
-    // non-critical
-  }
-
-  if (trip.driver_trust_profile && user?.id && user.id !== trip.driver_id) {
-    try {
-      await trackEvent('driver_profile_viewed', {
+    if (showDriverView && user?.id) {
+      void trackEvent('driver_profile_viewed', {
         userId: user.id,
-        payload: {
-          trip_id: id,
-          driver_id: trip.driver_id,
-          trust_score: trip.driver_trust_profile.trust_score,
-        },
+        payload: { trip_id: id, driver_id: driverId, trust_score: trustScore },
       });
-    } catch {
-      // non-critical
     }
-  }
+  });
 
   return (
     <div className="trip-detail-page py-4">

@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Suspense } from 'react';
+import { after } from 'next/server';
 import { getCurrentUser } from '@/lib/auth/session';
 import { getMyCommunities } from '@/lib/services/community';
 import { getUserProfile, getMyProfileFull } from '@/lib/services/user';
@@ -156,21 +157,27 @@ export default async function HomePage(props: {
   const copy = COPY[lang];
 
   const user = await getCurrentUser();
-  const [profile, savedPlaces] = user
-    ? await Promise.all([getUserProfile(user.id), getSavedPlaces(user.id)])
-    : [null, []];
-  const fullProfile = user ? await getMyProfileFull(user.id) : null;
+  // profile, saved places, full profile and memberships are all independent —
+  // fetch them in one parallel batch instead of four sequential round-trips.
+  const [profile, savedPlaces, fullProfile, memberships] = user
+    ? await Promise.all([
+        getUserProfile(user.id),
+        getSavedPlaces(user.id),
+        getMyProfileFull(user.id),
+        getMyCommunities(),
+      ])
+    : [null, [], null, []];
+
+  // Analytics must never block rendering — flush it after the response is sent.
   if (user) {
-    await trackEvent('page_view', {
-      userId: user.id,
-      status: 'success',
-      metadata: { page: '/app' },
+    const uid = user.id;
+    after(() => {
+      void trackEvent('page_view', { userId: uid, status: 'success', metadata: { page: '/app' } });
     });
   }
+
   const firstName = profile?.display_name?.trim().split(/\s+/)[0] || null;
   const cityOrArea = fullProfile?.city_or_area ?? undefined;
-
-  const memberships = await getMyCommunities();
   const joinedCommunities = memberships.map((membership) => ({
     ...membership.community,
     role: membership.role === 'admin' ? 'admin' : 'member',
