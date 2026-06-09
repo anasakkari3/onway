@@ -82,39 +82,6 @@ function describeTrust(community: CommunityInfo, copy: (typeof COMMUNITY_EXPLORE
   return copy.verifiedTrust;
 }
 
-const TRUST_GUIDE_COPY = {
-  en: {
-    title: 'How community trust works',
-    approvalDescription:
-      'Approval-required communities review requests before new members can browse or post rides there.',
-    verifiedLabel: 'Verified communities',
-    phaseLabel: 'Current phase',
-    phaseDescription: 'Only the four approved campus communities are available right now.',
-    approvalLabel: 'Approval flow',
-    howToStart: 'Choose a community before searching or posting rides. If the community needs approval, send a request and wait for the admins.',
-  },
-  ar: {
-    title: 'كيف تعمل الثقة في المجتمعات',
-    approvalDescription:
-      'تراجع المجتمعات التي تتطلب موافقة طلبات الانضمام قبل أن يتمكن الأعضاء الجدد من التصفح أو نشر الرحلات هناك.',
-    verifiedLabel: 'المجتمعات الموثقة',
-    phaseLabel: 'المرحلة الحالية',
-    phaseDescription: 'حاليًا تظهر فقط المجتمعات الجامعية الأربعة المعتمدة.',
-    approvalLabel: 'آلية الموافقة',
-    howToStart: 'اختر مجتمعًا قبل البحث أو نشر الرحلات. إذا كان المجتمع يحتاج موافقة، أرسل طلب الانضمام وانتظر رد المسؤولين.',
-  },
-  he: {
-    title: 'איך פועל אמון בקהילות',
-    approvalDescription:
-      'קהילות שדורשות אישור בודקות בקשות הצטרפות לפני שחברים חדשים יכולים לעיין או לפרסם שם נסיעות.',
-    verifiedLabel: 'קהילות מאומתות',
-    phaseLabel: 'השלב הנוכחי',
-    phaseDescription: 'כרגע זמינות רק ארבע הקהילות המאושרות.',
-    approvalLabel: 'תהליך אישור',
-    howToStart: 'בחרו קהילה לפני חיפוש או פרסום נסיעות. אם הקהילה דורשת אישור, שלחו בקשה והמתינו למנהלים.',
-  },
-} as const;
-
 export default function CommunityExplorer({
   joinedCommunities: initialJoinedCommunities,
   exploreCommunities: initialExploreCommunities,
@@ -122,7 +89,6 @@ export default function CommunityExplorer({
 }: Props) {
   const { lang } = useTranslation();
   const copy = COMMUNITY_EXPLORER_COPY[lang] ?? COMMUNITY_EXPLORER_COPY.en;
-  const trustGuideCopy = TRUST_GUIDE_COPY[lang] ?? TRUST_GUIDE_COPY.en;
   const router = useRouter();
   const [joinedCommunities, setJoinedCommunities] = useState(initialJoinedCommunities);
   const [exploreCommunities, setExploreCommunities] = useState(initialExploreCommunities);
@@ -483,47 +449,6 @@ export default function CommunityExplorer({
           </div>
         )}
 
-        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">
-                {copy.explore}
-              </p>
-              <h2 className="mt-1 text-lg font-bold text-slate-900 dark:text-slate-100">
-                {trustGuideCopy.title}
-              </h2>
-            </div>
-          </div>
-
-          <div className="mt-4 grid gap-3 sm:grid-cols-3">
-            <div className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-4 dark:border-sky-800/60 dark:bg-sky-900/20">
-              <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                {trustGuideCopy.verifiedLabel}
-              </p>
-              <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-                {copy.verifiedTrust}
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 dark:border-amber-800/60 dark:bg-amber-900/20">
-              <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                {trustGuideCopy.phaseLabel}
-              </p>
-              <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-                {trustGuideCopy.phaseDescription}
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 dark:border-slate-800 dark:bg-slate-950/60">
-              <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                {trustGuideCopy.approvalLabel}
-              </p>
-              <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-                {trustGuideCopy.approvalDescription}
-              </p>
-            </div>
-          </div>
-        </section>
 
         <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <div className="flex items-center justify-between gap-3">
